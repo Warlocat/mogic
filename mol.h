@@ -21,7 +21,7 @@ public:
     MOL();
     ~MOL();
     int Natom;
-    string basis, subgroup = "C1",unit = "BOHR";
+    string basis, subgroup = "C1", unit = "BOHR";
     VectorXi atomicNumber;
     VectorXd mass;
 
