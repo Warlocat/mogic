@@ -12,7 +12,11 @@ struct gto_single
 {
     int l, m;
     double a;
-    Vector3d center;
+};
+struct gto_contracted
+{
+    Matrix<gto_single, Dynamic, 1> gto_list;
+    VectorXd coeff;
 };
 
 
@@ -20,9 +24,8 @@ class GTO
 {
 private:
     int size, angular, atomN = 1;
-    Matrix<gto_single, Dynamic, 1> gtos; 
+    Matrix<gto_contracted, Dynamic, 1> gtos_c; 
     Vector3d center;
-    VectorXd coeff;
 
 public:
     GTO();
@@ -31,12 +34,17 @@ public:
     void readBasis();
 
     void normalization();
+    MatrixXd get_h1e();
+    MatrixXd get_overlap();
+    MatrixXd get_nuc_attra();
+    MatrixXd get_kinetic();
+
 
     double auxiliary(const int& l, const double& a);
-    double overlap(const gto_single& gto1, const gto_single& gto2);
-    double nuc_attraction(const gto_single& gto1, const gto_single& gto2);
-    double kinetic(const gto_single& gto1, const gto_single& gto2);
-    double h_1e(const gto_single& gto1, const gto_single& gto2);
+    double overlap_single_gto(const gto_single& gto1, const gto_single& gto2);
+    double nuc_attra_single_gto(const gto_single& gto1, const gto_single& gto2);
+    double kinetic_single_gto(const gto_single& gto1, const gto_single& gto2);
+    double h_1e_single_gto(const gto_single& gto1, const gto_single& gto2);
     
 };
 
