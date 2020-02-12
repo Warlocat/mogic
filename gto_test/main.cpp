@@ -11,7 +11,7 @@ int main()
     test.readBasis();
     test.normalization();
     // double h1e = test.get_h1e();
-    MatrixXd s = test.get_overlap();
+    MatrixXd s = test.get_h1e("overlap");
     cout << s << endl;
     
 

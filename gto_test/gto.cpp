@@ -32,7 +32,7 @@ double double_factorial(const int& n)
             cout << "ERROR: double_factorial is called for a negative number!" << endl;
             exit(99);
         }
-        return n * double_factorial(n - 2);
+        else return n * double_factorial(n - 2);
     }
 }
 double factorial(const int& n)
@@ -78,12 +78,12 @@ void GTO::readBasis()
     int tmp_int;
     size = 5;
     gtos_c.resize(5);
-    gtos_c(0).gto_list.resize(4);
+    gtos_c(0).gto_list.resize(3);
     gtos_c(1).gto_list.resize(1);
     gtos_c(2).gto_list.resize(1);
     gtos_c(3).gto_list.resize(1);
     gtos_c(4).gto_list.resize(1);
-    gtos_c(0).coeff.resize(4);
+    gtos_c(0).coeff.resize(3);
     gtos_c(1).coeff.resize(1);
     gtos_c(2).coeff.resize(1);
     gtos_c(3).coeff.resize(1);
@@ -91,7 +91,7 @@ void GTO::readBasis()
     ifs.open("ccpvdz");
         ifs >> atmName >> tmp;
         ifs >> orbAng >> tmp_int >> tmp;
-        for(int ii = 0; ii < 4; ii++)
+        for(int ii = 0; ii < 3; ii++)
         {
             ifs >> gtos_c(0).gto_list(ii).a >> gtos_c(0).coeff(ii);
             gtos_c(0).gto_list(ii).l = 0;
@@ -115,6 +115,14 @@ void GTO::readBasis()
             gtos_c(4).gto_list(ii).l = 1;    gtos_c(4).gto_list(ii).m = 1;
         }
     ifs.close();
+    for(int ii = 0; ii < 5; ii++) 
+    {
+        for(int jj = 0; jj < gtos_c(ii).coeff.rows();jj++)
+        {
+            cout << gtos_c(ii).gto_list(jj).a <<endl;
+        }
+        cout << endl;
+    }
 }
 
 void GTO::normalization()
@@ -133,6 +141,34 @@ void GTO::normalization()
     }
     
     return;
+}
+
+MatrixXd GTO::get_h1e(const string& intType)
+{
+    double (GTO::*integral_function)(const gto_single&, const gto_single&);
+    if(intType == "overlap")  integral_function = &GTO::overlap_single_gto;
+    else if(intType == "nuc_attra")  integral_function = &GTO::nuc_attra_single_gto;
+    else if(intType == "kinetic")  integral_function = &GTO::kinetic_single_gto;
+    else if(intType == "h1e")  integral_function = &GTO::h1e_single_gto;
+    else
+    {
+        cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
+        exit(99);
+    }
+    MatrixXd res(size, size);
+    res = res * 0.0;
+    for(int ii = 0; ii < size; ii++)
+    for(int jj = 0; jj < size; jj++)
+    {
+        int size_ii = gtos_c(ii).coeff.rows(), size_jj = gtos_c(jj).coeff.rows();
+        for(int mm = 0; mm < size_ii; mm++)
+        for(int nn = 0; nn < size_jj; nn++)
+        {
+            res(ii,jj) += gtos_c(ii).coeff(mm) * gtos_c(jj).coeff(nn) * (*integral_function)(gtos_c(ii).gto_list(mm), gtos_c(jj).gto_list(nn));
+        }
+    }
+
+    return res;
 }
 
 MatrixXd GTO::get_overlap()
@@ -195,7 +231,7 @@ double GTO::kinetic_single_gto(const gto_single& gto1, const gto_single& gto2)
     else return gto2.a * (2*gto1.l + 3) * auxiliary(2 + 2*gto1.l, gto1.a + gto2.a) - 2 * gto2.a * gto2.a * auxiliary(4 + 2*gto1.l, gto1.a + gto2.a);
 }
 
-double GTO::h_1e_single_gto(const gto_single& gto1, const gto_single& gto2)
+double GTO::h1e_single_gto(const gto_single& gto1, const gto_single& gto2)
 {
     return kinetic_single_gto(gto1, gto2) + nuc_attra_single_gto(gto1, gto2);
 }

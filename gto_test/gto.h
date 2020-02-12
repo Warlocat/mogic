@@ -34,6 +34,7 @@ public:
     void readBasis();
 
     void normalization();
+    MatrixXd get_h1e(const string& integralTYPE);
     MatrixXd get_h1e();
     MatrixXd get_overlap();
     MatrixXd get_nuc_attra();
@@ -44,7 +45,7 @@ public:
     double overlap_single_gto(const gto_single& gto1, const gto_single& gto2);
     double nuc_attra_single_gto(const gto_single& gto1, const gto_single& gto2);
     double kinetic_single_gto(const gto_single& gto1, const gto_single& gto2);
-    double h_1e_single_gto(const gto_single& gto1, const gto_single& gto2);
+    double h1e_single_gto(const gto_single& gto1, const gto_single& gto2);
     
 };
 
