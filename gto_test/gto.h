@@ -6,7 +6,6 @@
 using namespace std;
 using namespace Eigen;
 
-const double PI = asin(1.0) * 2.0;
 
 struct gto_single
 {
@@ -23,11 +22,13 @@ struct gto_contracted
 class GTO
 {
 private:
-    int size, angular, atomN = 1;
+    int angular, atomN = 1;
     Matrix<gto_contracted, Dynamic, 1> gtos_c; 
     Vector3d center;
 
 public:
+    int size;
+
     GTO();
     ~GTO();
 
@@ -35,17 +36,13 @@ public:
 
     void normalization();
     MatrixXd get_h1e(const string& integralTYPE);
-    MatrixXd get_h1e();
-    MatrixXd get_overlap();
-    MatrixXd get_nuc_attra();
-    MatrixXd get_kinetic();
+    Matrix<MatrixXd, -1, -1> get_h2e();
 
 
-    double auxiliary(const int& l, const double& a);
-    double overlap_single_gto(const gto_single& gto1, const gto_single& gto2);
-    double nuc_attra_single_gto(const gto_single& gto1, const gto_single& gto2);
-    double kinetic_single_gto(const gto_single& gto1, const gto_single& gto2);
-    double h1e_single_gto(const gto_single& gto1, const gto_single& gto2);
+    double auxiliary_1e(const int& l, const double& a);
+    double auxiliary_2e(const int& l1, const int& l2, const double& a1, const double& a2);
+    double int1e_single_gto(const gto_single& gto1, const gto_single& gto2, const string& integralTYPE);
+    double int2e_single_gto(const gto_single& gto1, const gto_single& gto2, const gto_single& gto3, const gto_single& gto4);
     
 };
 

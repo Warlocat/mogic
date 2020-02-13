@@ -1,16 +1,15 @@
-import pyscf
-from pyscf import gto
+import pyscf, numpy
+from pyscf import gto, scf, tools
 
 mol = gto.M(
     atom = 'H 0 0 0',
     spin = 1,
     basis = 'cc-pvdz'
 )
-
-s = mol.intor('int1e_ovlp')
-t = mol.intor('int1e_kin')
-v = mol.intor('int1e_nuc')
-
-print("s",s)
-# print("h1e",t+v)
-# print("v",v)
+mf = scf.UHF(mol)
+mf.kernel()
+dm = mf.make_rdm1()
+mo_feak = numpy.eye(5)
+print(mo_feak)
+tools.fcidump.from_mo(mol,"FCIDUMP", mo_feak)
+# tools.fcidump.from_scf(mf, "FCIDUMP")
