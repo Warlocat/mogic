@@ -10,6 +10,6 @@ mf = scf.UHF(mol)
 mf.kernel()
 dm = mf.make_rdm1()
 mo_feak = numpy.eye(5)
-print(mo_feak)
+
 tools.fcidump.from_mo(mol,"FCIDUMP", mo_feak)
 # tools.fcidump.from_scf(mf, "FCIDUMP")

@@ -210,24 +210,27 @@ double GTO::int1e_single_gto(const gto_single& gto1, const gto_single& gto2, con
 
 
 /*
-    auxiliary_2e is to evaluate \int_0^inf\int_0^inf x1^l1 x2^l2 |x1-x2|^-1 exp(-a1 * x1^2) exp(-a2 * x2^2) dx1dx2
+    auxiliary_2e is to evaluate \int_0^inf\int_0^inf r1^l1 r2^l2 |r1-r2|^-1 exp(-a1 * r1^2) exp(-a2 * r2^2) r1^2 r2^2 dx1dx2
 */
 double GTO::auxiliary_2e(const int& l1, const int& l2, const double& a1, const double& a2)
 {
-    double res = 0.0, l1f = factorial(l1), l2f = factorial(l2);
-    for(int ii = 0; ii <= l1; ii++) 
+    int n1 = l1 / 2, n2 = l2 / 2;
+    double res = 0.0,  n1f = factorial(n1), n2f = factorial(n2);
+    for(int ii = 0; ii <= n1; ii++) 
     {
-        res += l1f * pow(a1, ii - l1 - 1) * pow(a1 + a2, -l2-ii-1.5) * double_factorial(2*l2 + 2*ii + 1)/ factorial(ii) / pow(2.0, l2 + ii + 1);
+        res += n1f * pow(a1, ii - n1 - 1) * pow(a1 + a2, -n2-ii-1.5) * double_factorial(2*n2 + 2*ii + 1)/ factorial(ii) / pow(2.0, n2 + ii + 1);
     }
-    for(int ii = 0; ii <= l1; ii++) 
+    for(int ii = 0; ii <= n2; ii++) 
     {
-        res += l2f * pow(a2, ii - l2 - 1) * pow(a1 + a2, -l1-ii-1.5) * double_factorial(2*l1 + 2*ii + 1)/ factorial(ii) / pow(2.0, l1 + ii + 1);
+        res += n2f * pow(a2, ii - n2 - 1) * pow(a1 + a2, -n1-ii-1.5) * double_factorial(2*n1 + 2*ii + 1)/ factorial(ii) / pow(2.0, n1 + ii + 1);
     }
-    return res * 4.0 * pow(M_PI, 1.5);
+    // return res * 4.0 * pow(M_PI, 1.5);
+    return res * sqrt(M_PI) / 4.0;
 }
 
 double GTO::int2e_single_gto(const gto_single& gto1, const gto_single& gto2, const gto_single& gto3, const gto_single& gto4)
 {
     if(gto1.l != gto2.l || gto1.m != gto2.m || gto3.l != gto4.l || gto3.m != gto4.m) return 0.0;
-    else    return auxiliary_2e(2 + gto1.l, 2 + gto3.l, gto1.a + gto2.a, gto3.a + gto4.a);
+    // else    return auxiliary_2e(2 + 2*gto1.l, 2 + 2*gto3.l, gto1.a + gto2.a, gto3.a + gto4.a);
+    else    return auxiliary_2e(2*gto1.l, 2*gto3.l, gto1.a + gto2.a, gto3.a + gto4.a);
 }
