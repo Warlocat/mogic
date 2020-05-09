@@ -4,10 +4,17 @@
 #include<iomanip>
 #include<fstream>
 #include<cmath>
+#include<complex>
+#include<omp.h>
+#include<wignerSymbols/wignerSymbols-cpp.h>
+#include<gsl/gsl_sf_coupling.h>
 #include"gto.h"
 using namespace std;
 using namespace Eigen;
 
+/*
+    factorial and double_factorial
+*/
 double double_factorial(const int& n)
 {
     switch (n)
@@ -62,6 +69,90 @@ double factorial(const int& n)
     }
 }
 
+/*
+    Wigner 3j coefficients with J = l1 + l2 + l3 is even
+*/
+double wigner_3j(const int& l1, const int& l2, const int& l3, const int& m1, const int& m2, const int& m3)
+{
+    return gsl_sf_coupling_3j(2*l1,2*l2,2*l3,2*m1,2*m2,2*m3);
+
+
+    if(l3 > l1 + l2 || l3 < abs(l1 - l2) || m1 + m2 + m3 != 0)
+    {
+        return 0.0;
+    }
+    else
+    {
+        Vector3i L(l1,l2,l3), M(m1,m2,m3);
+        int tmp, Lmax = L.maxCoeff();
+        for(int ii = 0; ii <= 1; ii++)
+        {
+            if(L(ii) == Lmax)
+            {
+                tmp = L(ii);
+                L(ii) = L(2);
+                L(2) = tmp;
+                tmp = M(ii);
+                M(ii) = M(2);
+                M(2) = tmp;
+                break;
+            }
+        }
+
+        if(L(2) == L(0) + L(1))
+        {
+            return pow(-1, L(0) - L(1) - M(2)) * sqrt(factorial(2*L(0)) * factorial(2*L(1)) / factorial(2*L(2) + 1) * factorial(L(2) - M(2)) * factorial(L(2) + M(2)) / factorial(L(0)+M(0)) / factorial(L(0)-M(0)) / factorial(L(1)+M(1)) / factorial(L(1)-M(1)));
+        }
+        else
+        {
+            return gsl_sf_coupling_3j(L(0),L(1),L(2),M(0),M(1),M(2));
+        }
+        
+    }
+}
+/*
+    Wigner 3j coefficients with m1 = m2 = m3 = 0
+*/
+double wigner_3j_zeroM(const int& l1, const int& l2, const int& l3)
+{
+    int J = l1+l2+l3, g = J/2;
+    if(J%2 || l3 > l1 + l2 || l3 < abs(l1 - l2))
+    {
+        return 0.0;
+    }
+    else
+    {
+        return pow(-1,g) * sqrt(factorial(J - 2*l1) * factorial(J - 2*l2) * factorial(J - 2*l3) / factorial(J + 1)) 
+                * factorial(g) / factorial(g-l1) / factorial(g-l2) / factorial(g-l3);
+    }
+}
+
+
+
+
+complex<double> U_SH_trans(const int& mu, const int& mm)
+{
+    complex<double> result;
+    if(abs(mu) != abs(mm)) result = 0.0;
+    else if (mu == 0)
+    {
+        result = 1.0;
+    }
+    else if (mu > 0)
+    {
+        if(mu == mm) result = pow(-1.0, mu) / sqrt(2.0);
+        else result = 1.0 / sqrt(2.0);
+    }
+    else
+    {
+        if(mu == mm) result = 1.0 / sqrt(2.0) * complex<double>(0.0,1.0);
+        else result = -pow(-1.0, mu) / sqrt(2.0) * complex<double>(0.0,1.0);
+    }
+    
+    return result;
+}
+
+
 GTO::GTO()
 {
 }
@@ -70,54 +161,100 @@ GTO::~GTO()
 {
 }
 
-void GTO::readBasis()
+void GTO::readBasis(const string& atomName, const string& filename)
 {
-    string atmName;
-    string orbAng;
-    double tmp;
-    ifstream ifs;
-    int tmp_int;
-    size = 5;
-    gtos_c.resize(5);
-    gtos_c(0).gto_list.resize(3);
-    gtos_c(1).gto_list.resize(1);
-    gtos_c(2).gto_list.resize(1);
-    gtos_c(3).gto_list.resize(1);
-    gtos_c(4).gto_list.resize(1);
-    gtos_c(0).coeff.resize(3);
-    gtos_c(1).coeff.resize(1);
-    gtos_c(2).coeff.resize(1);
-    gtos_c(3).coeff.resize(1);
-    gtos_c(4).coeff.resize(1);
-    ifs.open("ccpvdz");
-        ifs >> atmName >> tmp;
-        ifs >> orbAng >> tmp_int >> tmp;
-        for(int ii = 0; ii < 3; ii++)
-        {
-            ifs >> gtos_c(0).gto_list(ii).a >> gtos_c(0).coeff(ii);
-            gtos_c(0).gto_list(ii).l = 0;
-            gtos_c(0).gto_list(ii).m = 0;
+    if(atomName == "H") atomN = 1;
+    else if(atomName == "C") atomN = 6;
+    else if(atomName == "Cu") atomN = 29;
 
-            gtos_c(0).coeff(ii) = gtos_c(0).coeff(ii) / sqrt(auxiliary_1e(2*gtos_c(0).gto_list(ii).l + 2, 2 * gtos_c(0).gto_list(ii).a));
-        }
-        ifs >> orbAng >> tmp_int >> tmp;
-        for(int ii = 0; ii < 1; ii++)
+    ifstream ifs;
+    int atom_position = 0, angularQN, nGTO, int_tmp;
+    string flag_atom = atomName + "     0", flags, all_info = "", flags_tmp;
+    size = 0;
+    ifs.open(filename);
+        while (!ifs.eof())
         {
-            ifs >> gtos_c(1).gto_list(ii).a >> gtos_c(1).coeff(ii);
-            gtos_c(1).gto_list(ii).l = 0;
-            gtos_c(1).gto_list(ii).m = 0;
+            getline(ifs,flags);
+            atom_position++;
+            if(flags == flag_atom) break;
         }
-        ifs >> orbAng >> tmp_int >> tmp;
-        for(int ii = 0; ii < 1; ii++)
+        if(ifs.eof())
         {
-            ifs >> gtos_c(2).gto_list(ii).a >> gtos_c(2).coeff(ii);
-            gtos_c(3).gto_list(ii).a = gtos_c(4).gto_list(ii).a = gtos_c(2).gto_list(ii).a;
-            gtos_c(3).coeff(ii) = gtos_c(4).coeff(ii) = gtos_c(2).coeff(ii);
-            gtos_c(2).gto_list(ii).l = 1;    gtos_c(2).gto_list(ii).m = 0;
-            gtos_c(3).gto_list(ii).l = 1;    gtos_c(3).gto_list(ii).m = -1;
-            gtos_c(4).gto_list(ii).l = 1;    gtos_c(4).gto_list(ii).m = 1;
+            cout << "ERROR: can not find target atom (" + atomName + ") in the basis set file (" + filename + ")\n";
+            exit(99);
         }
+        else
+        {
+            while (true)
+            {
+                getline(ifs,flags);
+                if(flags == "****") break;
+                flags.resize(1);
+                if(flags == "S") size += 1;
+                else if(flags == "P") size += 3;
+                else if(flags == "D") size += 5;
+                else if(flags == "F") size += 7;
+                else if(flags == "G") size += 9;
+                else if(flags == "H") size += 11;
+                else if(flags == "I") size += 13;
+                else if(flags != " ")
+                {
+                    cout << "ERROR: " << flags << " orbital is not supported now." << endl;
+                    exit(99);
+                }
+            }
+            gtos_c.resize(size);
+        }       
     ifs.close();
+    // ifs.clear();
+    ifs.open(filename);
+        for(int ii = 0; ii < atom_position; ii++)   getline(ifs,flags);
+        int_tmp = 0;
+        while (true)
+        {
+            ifs >> flags;
+            if(flags == "****") break;
+            else ifs >> nGTO >> flags_tmp;
+
+            if(flags == "S") angularQN = 0;
+            else if(flags == "P") angularQN = 1;
+            else if(flags == "D") angularQN = 2;
+            else if(flags == "F") angularQN = 3;
+            else if(flags == "G") angularQN = 4;
+            else if(flags == "H") angularQN = 5;
+            else if(flags == "I") angularQN = 6;
+          
+            gtos_c(int_tmp).gto_list.resize(nGTO);
+            gtos_c(int_tmp).coeff.resize(nGTO);
+
+            for(int ii = 0 ; ii < nGTO; ii++)
+            {
+                ifs >> gtos_c(int_tmp).gto_list(ii).a >> gtos_c(int_tmp).coeff(ii);
+                gtos_c(int_tmp).gto_list(ii).l = angularQN;
+                gtos_c(int_tmp).gto_list(ii).m = -angularQN;
+                gtos_c(int_tmp).coeff(ii) = gtos_c(int_tmp).coeff(ii) / sqrt(auxiliary_1e(2*gtos_c(int_tmp).gto_list(ii).l + 2, 2 * gtos_c(int_tmp).gto_list(ii).a));
+            }
+            for(int ii = 1; ii < 2*angularQN + 1; ii++)
+            {
+                gtos_c(int_tmp + ii).gto_list.resize(nGTO);
+                gtos_c(int_tmp + ii).coeff.resize(nGTO);
+                for(int jj = 0; jj < nGTO; jj++)
+                {
+                    gtos_c(int_tmp + ii).coeff(jj) = gtos_c(int_tmp).coeff(jj);
+                    gtos_c(int_tmp + ii).gto_list(jj).a = gtos_c(int_tmp).gto_list(jj).a;
+                    gtos_c(int_tmp + ii).gto_list(jj).l = gtos_c(int_tmp).gto_list(jj).l;
+                    gtos_c(int_tmp + ii).gto_list(jj).m = gtos_c(int_tmp).gto_list(jj).m + ii;
+                }
+            }
+            int_tmp += 2*angularQN + 1;
+        }   
+    ifs.close();
+    // for(int ii = 0; ii < size; ii++)
+    // for(int jj = 0; jj < gtos_c(ii).coeff.rows(); jj++)
+    // {
+    //     cout << gtos_c(ii).gto_list(jj).a << "\t" << gtos_c(ii).coeff(jj) << "\t" << gtos_c(ii).gto_list(jj).l << "\t" << gtos_c(ii).gto_list(jj).m << "\n";
+    // }
+    // exit(99);
 }
 
 void GTO::normalization()
@@ -158,6 +295,7 @@ MatrixXd GTO::get_h1e(const string& intType)
 Matrix<MatrixXd, -1, -1> GTO::get_h2e()
 {
     Matrix<MatrixXd, -1, -1> int_2e(size, size);
+    #pragma omp parallel for
     for(int ii = 0; ii < size; ii++)
     for(int jj = 0; jj < size; jj++)
     {
@@ -186,7 +324,7 @@ double GTO::auxiliary_1e(const int& l, const double& a)
 {
     int n = l / 2;
     if(n*2 == l)    return double_factorial(2*n-1)/pow(a,n)/pow(2.0,n+1)*sqrt(M_PI/a);
-    else    return factorial(n) /2.0/pow(a,n+1);
+    else    return factorial(n)/2.0/pow(a,n+1);
 }
 
 
@@ -210,27 +348,110 @@ double GTO::int1e_single_gto(const gto_single& gto1, const gto_single& gto2, con
 
 
 /*
-    auxiliary_2e is to evaluate \int_0^inf\int_0^inf r1^l1 r2^l2 |r1-r2|^-1 exp(-a1 * r1^2) exp(-a2 * r2^2) r1^2 r2^2 dx1dx2
+    auxiliary_2e_0_r is to evaluate \int_0^inf \int_0^r2 r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
 */
-double GTO::auxiliary_2e(const int& l1, const int& l2, const double& a1, const double& a2)
+double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2)
 {
-    int n1 = l1 / 2, n2 = l2 / 2;
-    double res = 0.0,  n1f = factorial(n1), n2f = factorial(n2);
-    for(int ii = 0; ii <= n1; ii++) 
+    int n1 = l1 / 2;
+    if(n1 * 2 == l1)
     {
-        res += n1f * pow(a1, ii - n1 - 1) * pow(a1 + a2, -n2-ii-1.5) * double_factorial(2*n2 + 2*ii + 1)/ factorial(ii) / pow(2.0, n2 + ii + 1);
+        cout << "ERROR: When auxiliary_2e_0r is called, l1 must be set to an odd number!" << endl;
+        exit(99);
     }
-    for(int ii = 0; ii <= n2; ii++) 
+    else
     {
-        res += n2f * pow(a2, ii - n2 - 1) * pow(a1 + a2, -n1-ii-1.5) * double_factorial(2*n1 + 2*ii + 1)/ factorial(ii) / pow(2.0, n1 + ii + 1);
+        double tmp = 0.5 / pow(a1, n1+1) * auxiliary_1e(l2, a2);
+        for(int kk = 0; kk <= n1; kk++)
+        {
+            tmp -= 0.5 / factorial(kk) / pow(a1, n1 - kk + 1) * auxiliary_1e(l2 + 2*kk, a1 + a2);
+        }
+        return tmp * factorial(n1);
     }
-    // return res * 4.0 * pow(M_PI, 1.5);
-    return res * sqrt(M_PI) / 4.0;
+    
+}
+
+/*
+    auxiliary_2e_r_inf is to evaluate \int_0^inf \int_r2^inf r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
+*/
+double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2)
+{
+    int n1 = l1 / 2;
+    if(n1 * 2 == l1)
+    {
+        cout << "ERROR: When auxiliary_2e_0r is called, l1 must be set to an odd number!" << endl;
+        exit(99);
+    }
+    else
+    {
+        double tmp = 0.0;
+        for(int kk = 0; kk <= n1; kk++)
+        {
+            tmp += 0.5 / factorial(kk) / pow(a1, n1 - kk + 1) * auxiliary_1e(l2 + 2*kk, a1 + a2);
+        }
+        return tmp * factorial(n1);
+    }
+    
 }
 
 double GTO::int2e_single_gto(const gto_single& gto1, const gto_single& gto2, const gto_single& gto3, const gto_single& gto4)
 {
-    if(gto1.l != gto2.l || gto1.m != gto2.m || gto3.l != gto4.l || gto3.m != gto4.m) return 0.0;
-    // else    return auxiliary_2e(2 + 2*gto1.l, 2 + 2*gto3.l, gto1.a + gto2.a, gto3.a + gto4.a);
-    else    return auxiliary_2e(2*gto1.l, 2*gto3.l, gto1.a + gto2.a, gto3.a + gto4.a);
+    if((gto1.l + gto2.l + gto3.l + gto4.l) % 2 || (gto1.m + gto2.m + gto3.m + gto4.m) % 2 || gto1.m * gto2.m * gto3.m * gto4.m < 0) return 0.0;
+    else
+    {
+        int l_i = gto1.l, l_j = gto2.l, l_k = gto3.l, l_l = gto4.l, m_i = gto1.m, m_j = gto2.m, m_k = gto3.m, m_l = gto4.m;
+        double a_i = gto1.a, a_j = gto2.a, a_k = gto3.a, a_l = gto4.a;
+        double result = 0.0, radial, angular;
+        
+        for(int ll = min(l_i + l_j, l_k + l_l); ll >= 0; ll = ll - 2)
+        {
+            if((l_i + l_j + 2 + ll) % 2)
+            {
+                radial = auxiliary_2e_0_r(l_i + l_j + 2 + ll, l_k + l_l + 1 - ll, a_i + a_j, a_k + a_l)
+                        + auxiliary_2e_0_r(l_k + l_l + 2 + ll, l_i + l_j + 1 - ll, a_k + a_l, a_i + a_j);
+            }
+            else
+            {
+                radial = auxiliary_2e_r_inf(l_k + l_l + 1 - ll, l_i + l_j + 2 + ll, a_k + a_l, a_i + a_j)
+                        + auxiliary_2e_r_inf(l_i + l_j + 1 - ll, l_k + l_l + 2 + ll, a_i + a_j, a_k + a_l);
+            }
+
+            angular = 0.0;
+            for(int mm = -ll; mm <= ll; mm++)
+            {
+                double tmp = 0.0;
+                for(int m1 = -abs(m_i); m1 <= abs(m_i); m1+=2*abs(m_i))
+                {
+                    for(int m2 = -abs(m_j); m2 <= abs(m_j); m2+=2*abs(m_j))
+                    {
+                        for(int m3 = -abs(m_k); m3 <= abs(m_k); m3+=2*abs(m_k))
+                        {
+                            for(int m4 = -abs(m_l); m4 <= abs(m_l); m4+=2*abs(m_l))
+                            {
+                                if(m1 + m2 - mm != 0 || m3 + m4 + mm != 0)
+                                {
+                                    tmp += 0.0;
+                                }
+                                else
+                                {
+                                    tmp += real(U_SH_trans(m_i, m1) * U_SH_trans(m_j, m2) * U_SH_trans(m_k, m3) * U_SH_trans(m_l, m4))
+                                            * wigner_3j(l_i, l_j, ll, m1, m2, -mm) * wigner_3j(l_k, l_l, ll, m3, m4, mm);
+                                }
+                                if(m4 == 0) break;
+                            }
+                            if(m3 == 0) break;
+                        }
+                        if(m2 == 0) break;
+                    }
+                    if(m1 == 0) break;
+                }
+                angular += tmp * pow(-1, mm) * sqrt((2.0 * l_i + 1.0)*(2.0 * l_j + 1.0)*(2.0 * l_k + 1.0)*(2.0 * l_l + 1.0))
+                            * wigner_3j_zeroM(l_i, l_j, ll) * wigner_3j_zeroM(l_k, l_l, ll);
+            }
+
+            
+            result += radial * angular;
+        }
+        return result;
+    }    
 }
+
