@@ -160,6 +160,9 @@ GTO::~GTO()
 {
 }
 
+/*
+    Read basis file in gaussian format
+*/
 void GTO::readBasis(const string& atomName, const string& filename)
 {
     if(atomName == "H") atomN = 1;
@@ -223,39 +226,37 @@ void GTO::readBasis(const string& atomName, const string& filename)
             else if(flags == "H") angularQN = 5;
             else if(flags == "I") angularQN = 6;
           
-            gtos_c(int_tmp).gto_list.resize(nGTO);
+            gtos_c(int_tmp).exp_a.resize(nGTO);
             gtos_c(int_tmp).coeff.resize(nGTO);
+            gtos_c(int_tmp).l = angularQN;
+            gtos_c(int_tmp).m = -angularQN;
 
             for(int ii = 0 ; ii < nGTO; ii++)
             {
-                ifs >> gtos_c(int_tmp).gto_list(ii).a >> gtos_c(int_tmp).coeff(ii);
-                gtos_c(int_tmp).gto_list(ii).l = angularQN;
-                gtos_c(int_tmp).gto_list(ii).m = -angularQN;
-                gtos_c(int_tmp).coeff(ii) = gtos_c(int_tmp).coeff(ii) / sqrt(auxiliary_1e(2*gtos_c(int_tmp).gto_list(ii).l + 2, 2 * gtos_c(int_tmp).gto_list(ii).a));
+                ifs >> gtos_c(int_tmp).exp_a(ii) >> gtos_c(int_tmp).coeff(ii);
+                gtos_c(int_tmp).coeff(ii) = gtos_c(int_tmp).coeff(ii) / sqrt(auxiliary_1e(2*gtos_c(int_tmp).l + 2, 2 * gtos_c(int_tmp).exp_a(ii)));
             }
             for(int ii = 1; ii < 2*angularQN + 1; ii++)
             {
-                gtos_c(int_tmp + ii).gto_list.resize(nGTO);
+                gtos_c(int_tmp + ii).exp_a.resize(nGTO);
                 gtos_c(int_tmp + ii).coeff.resize(nGTO);
+                gtos_c(int_tmp + ii).l = gtos_c(int_tmp).l;
+                gtos_c(int_tmp + ii).m = gtos_c(int_tmp).m + ii;
                 for(int jj = 0; jj < nGTO; jj++)
                 {
                     gtos_c(int_tmp + ii).coeff(jj) = gtos_c(int_tmp).coeff(jj);
-                    gtos_c(int_tmp + ii).gto_list(jj).a = gtos_c(int_tmp).gto_list(jj).a;
-                    gtos_c(int_tmp + ii).gto_list(jj).l = gtos_c(int_tmp).gto_list(jj).l;
-                    gtos_c(int_tmp + ii).gto_list(jj).m = gtos_c(int_tmp).gto_list(jj).m + ii;
+                    gtos_c(int_tmp + ii).exp_a(jj) = gtos_c(int_tmp).exp_a(jj);
                 }
             }
             int_tmp += 2*angularQN + 1;
         }   
     ifs.close();
-    // for(int ii = 0; ii < size; ii++)
-    // for(int jj = 0; jj < gtos_c(ii).coeff.rows(); jj++)
-    // {
-    //     cout << gtos_c(ii).gto_list(jj).a << "\t" << gtos_c(ii).coeff(jj) << "\t" << gtos_c(ii).gto_list(jj).l << "\t" << gtos_c(ii).gto_list(jj).m << "\n";
-    // }
-    // exit(99);
 }
 
+
+/*
+    Normalization
+*/
 void GTO::normalization()
 {
     for(int ss = 0; ss < size; ss++)
@@ -265,7 +266,7 @@ void GTO::normalization()
         for(int ii = 0; ii < size_gtos; ii++)
         for(int jj = 0; jj < size_gtos; jj++)
         {
-            tmp += gtos_c(ss).coeff(ii) * gtos_c(ss).coeff(jj) * auxiliary_1e(2+gtos_c(ss).gto_list(ii).l+gtos_c(ss).gto_list(jj).l, gtos_c(ss).gto_list(ii).a+gtos_c(ss).gto_list(jj).a);
+            tmp += gtos_c(ss).coeff(ii) * gtos_c(ss).coeff(jj) * auxiliary_1e(2+2*gtos_c(ss).l, gtos_c(ss).exp_a(ii)+gtos_c(ss).exp_a(jj));
         }
         gtos_c(ss).coeff = gtos_c(ss).coeff / sqrt(tmp);
     }
@@ -273,6 +274,10 @@ void GTO::normalization()
     return;
 }
 
+
+/*
+    Evaluate different one-electron integrals 
+*/
 MatrixXd GTO::get_h1e(const string& intType)
 {
     MatrixXd int_1e(size, size);
@@ -284,7 +289,7 @@ MatrixXd GTO::get_h1e(const string& intType)
         for(int mm = 0; mm < size_ii; mm++)
         for(int nn = 0; nn < size_jj; nn++)
         {
-            int_1e(ii,jj) += gtos_c(ii).coeff(mm) * gtos_c(jj).coeff(nn) * int1e_single_gto(gtos_c(ii).gto_list(mm), gtos_c(jj).gto_list(nn), intType);
+            int_1e(ii,jj) += gtos_c(ii).coeff(mm) * gtos_c(jj).coeff(nn) * int1e_single_gto(gtos_c(ii).l, gtos_c(ii).m, gtos_c(ii).exp_a(mm), gtos_c(jj).l, gtos_c(jj).m, gtos_c(jj).exp_a(nn), intType);
         }
     }
 
@@ -302,13 +307,17 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
         for(int kk = 0; kk < size; kk++)
         for(int ll = 0; ll < size; ll++)
         {
-            int size_i = gtos_c(ii).coeff.rows(), size_j = gtos_c(jj).coeff.rows(), size_k = gtos_c(kk).coeff.rows(), size_l = gtos_c(ll).coeff.rows();
             int_2e(ii,jj)(kk,ll) = 0.0;
+            if((gtos_c(ii).l+gtos_c(jj).l+gtos_c(kk).l+gtos_c(ll).l) % 2 || (gtos_c(ii).m+gtos_c(jj).m+gtos_c(kk).m+gtos_c(ll).m) % 2 || (gtos_c(ii).l*gtos_c(jj).l*gtos_c(kk).l*gtos_c(ll).l) < 0)
+            {
+                continue;
+            }
+            int size_i = gtos_c(ii).coeff.rows(), size_j = gtos_c(jj).coeff.rows(), size_k = gtos_c(kk).coeff.rows(), size_l = gtos_c(ll).coeff.rows();
             for(int ni = 0; ni < size_i; ni++)
             for(int nj = 0; nj < size_j; nj++)
             for(int nk = 0; nk < size_k; nk++)
             for(int nl = 0; nl < size_l; nl++)
-            int_2e(ii,jj)(kk,ll) += gtos_c(ii).coeff(ni) * gtos_c(jj).coeff(nj) * gtos_c(kk).coeff(nk) * gtos_c(ll).coeff(nl) * int2e_single_gto(gtos_c(ii).gto_list(ni), gtos_c(jj).gto_list(nj),gtos_c(kk).gto_list(nk), gtos_c(ll).gto_list(nl));
+            int_2e(ii,jj)(kk,ll) += gtos_c(ii).coeff(ni) * gtos_c(jj).coeff(nj) * gtos_c(kk).coeff(nk) * gtos_c(ll).coeff(nl) * int2e_single_gto(gtos_c(ii).l, gtos_c(ii).m, gtos_c(ii).exp_a(ni), gtos_c(jj).l, gtos_c(jj).m, gtos_c(jj).exp_a(nj), gtos_c(kk).l, gtos_c(kk).m, gtos_c(kk).exp_a(nk), gtos_c(ll).l, gtos_c(ll).m, gtos_c(ll).exp_a(nl));
         }
     }
     return int_2e;
@@ -327,17 +336,14 @@ double GTO::auxiliary_1e(const int& l, const double& a)
 }
 
 
-double GTO::int1e_single_gto(const gto_single& gto1, const gto_single& gto2, const string& integralTYPE)
+double GTO::int1e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const string& integralTYPE)
 {
-    int l = gto1.l;
-    double a1 = gto1.a, a2 = gto2.a;
-    
-    if(gto1.l != gto2.l || gto1.m != gto2.m) return 0.0;
-    else if(integralTYPE == "overlap")  return auxiliary_1e(2 + 2*l, a1 + a2);
-    else if(integralTYPE == "nuc_attra")  return -atomN * auxiliary_1e(1 + 2*l, a1 + a2);
-    else if(integralTYPE == "kinetic")  return a2 * (2*l + 3) * auxiliary_1e(2 + 2*l, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l, a1 + a2);
-    else if(integralTYPE == "h1e")  return int1e_single_gto(gto1, gto2, "kinetic") + int1e_single_gto(gto1, gto2, "nuc_attra");
-    else if(integralTYPE == "p.Vp")  return ((2*l + 1) * l * auxiliary_1e(2*l-1, a1 + a2) - 2*l*(a1+a2)*auxiliary_1e(2*l + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*l + 3, a1 + a2)) * -atomN;
+    if(l1 != l2 || m1 != m2) return 0.0;
+    else if(integralTYPE == "overlap")  return auxiliary_1e(2 + 2*l1, a1 + a2);
+    else if(integralTYPE == "nuc_attra")  return -atomN * auxiliary_1e(1 + 2*l1, a1 + a2);
+    else if(integralTYPE == "kinetic")  return a2 * (2*l1 + 3) * auxiliary_1e(2 + 2*l1, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l1, a1 + a2);
+    else if(integralTYPE == "h1e")  return a2 * (2*l1 + 3) * auxiliary_1e(2 + 2*l1, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l1, a1 + a2) + -atomN * auxiliary_1e(1 + 2*l1, a1 + a2);
+    else if(integralTYPE == "p.Vp")  return ((2*l1 + 1) * l1 * auxiliary_1e(2*l1-1, a1 + a2) - 2*l1*(a1+a2)*auxiliary_1e(2*l1 + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*l1 + 3, a1 + a2)) * -atomN;
     else
     {
         cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
@@ -392,59 +398,57 @@ double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, c
     
 }
 
-double GTO::int2e_single_gto(const gto_single& gto1, const gto_single& gto2, const gto_single& gto3, const gto_single& gto4)
+double GTO::int2e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const int& l3, const int& m3, const double& a3, const int& l4, const int& m4, const double& a4)
 {
-    if((gto1.l + gto2.l + gto3.l + gto4.l) % 2 || (gto1.m + gto2.m + gto3.m + gto4.m) % 2 || gto1.m * gto2.m * gto3.m * gto4.m < 0) return 0.0;
+    if((l1+l2+l3+l4) % 2 || (m1+m2+m3+m4) % 2 || m1 * m2 * m3 * m4 < 0) return 0.0;
     else
     {
-        int l_i = gto1.l, l_j = gto2.l, l_k = gto3.l, l_l = gto4.l, m_i = gto1.m, m_j = gto2.m, m_k = gto3.m, m_l = gto4.m;
-        double a_i = gto1.a, a_j = gto2.a, a_k = gto3.a, a_l = gto4.a;
         double result = 0.0, radial, angular;
         
-        for(int ll = min(l_i + l_j, l_k + l_l); ll >= 0; ll = ll - 2)
+        for(int ll = min(l1 + l2, l3 + l4); ll >= 0; ll = ll - 2)
         {
-            if((l_i + l_j + 2 + ll) % 2)
+            if((l1 + l2 + 2 + ll) % 2)
             {
-                radial = auxiliary_2e_0_r(l_i + l_j + 2 + ll, l_k + l_l + 1 - ll, a_i + a_j, a_k + a_l)
-                        + auxiliary_2e_0_r(l_k + l_l + 2 + ll, l_i + l_j + 1 - ll, a_k + a_l, a_i + a_j);
+                radial = auxiliary_2e_0_r(l1 + l2 + 2 + ll, l3 + l4 + 1 - ll, a1 + a2, a3 + a4)
+                        + auxiliary_2e_0_r(l3 + l4 + 2 + ll, l1 + l2 + 1 - ll, a3 + a4, a1 + a2);
             }
             else
             {
-                radial = auxiliary_2e_r_inf(l_k + l_l + 1 - ll, l_i + l_j + 2 + ll, a_k + a_l, a_i + a_j)
-                        + auxiliary_2e_r_inf(l_i + l_j + 1 - ll, l_k + l_l + 2 + ll, a_i + a_j, a_k + a_l);
+                radial = auxiliary_2e_r_inf(l3 + l4 + 1 - ll, l1 + l2 + 2 + ll, a3 + a4, a1 + a2)
+                        + auxiliary_2e_r_inf(l1 + l2 + 1 - ll, l3 + l4 + 2 + ll, a1 + a2, a3 + a4);
             }
 
             angular = 0.0;
             for(int mm = -ll; mm <= ll; mm++)
             {
                 double tmp = 0.0;
-                for(int m1 = -abs(m_i); m1 <= abs(m_i); m1+=2*abs(m_i))
+                for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
                 {
-                    for(int m2 = -abs(m_j); m2 <= abs(m_j); m2+=2*abs(m_j))
+                    for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
                     {
-                        for(int m3 = -abs(m_k); m3 <= abs(m_k); m3+=2*abs(m_k))
+                        for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
                         {
-                            for(int m4 = -abs(m_l); m4 <= abs(m_l); m4+=2*abs(m_l))
+                            for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
                             {
-                                if(m1 + m2 - mm != 0 || m3 + m4 + mm != 0)
+                                if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
                                 {
                                     tmp += 0.0;
                                 }
                                 else
                                 {
-                                    tmp += real(U_SH_trans(m_i, m1) * U_SH_trans(m_j, m2) * U_SH_trans(m_k, m3) * U_SH_trans(m_l, m4))
-                                            * wigner_3j(l_i, l_j, ll, m1, m2, -mm) * wigner_3j(l_k, l_l, ll, m3, m4, mm);
+                                    tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l))
+                                            * wigner_3j(l1, l2, ll, m_i, m_j, -mm) * wigner_3j(l3, l4, ll, m_k, m_l, mm);
                                 }
-                                if(m4 == 0) break;
+                                if(m_l == 0) break;
                             }
-                            if(m3 == 0) break;
+                            if(m_k == 0) break;
                         }
-                        if(m2 == 0) break;
+                        if(m_j == 0) break;
                     }
-                    if(m1 == 0) break;
+                    if(m_i == 0) break;
                 }
-                angular += tmp * pow(-1, mm) * sqrt((2.0 * l_i + 1.0)*(2.0 * l_j + 1.0)*(2.0 * l_k + 1.0)*(2.0 * l_l + 1.0))
-                            * wigner_3j_zeroM(l_i, l_j, ll) * wigner_3j_zeroM(l_k, l_l, ll);
+                angular += tmp * pow(-1, mm) * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0))
+                            * wigner_3j_zeroM(l1, l2, ll) * wigner_3j_zeroM(l3, l4, ll);
             }
 
             

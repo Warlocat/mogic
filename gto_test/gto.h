@@ -13,15 +13,11 @@ double wigner_3j(const int& l1, const int& l2, const int& l3, const int& m1, con
 double wigner_3j_zeroM(const int& l1, const int& l2, const int& l3);
 complex<double> U_SH_trans(const int& mu, const int& mm);
 
-struct gto_single
-{
-    int l, m;
-    double a;
-};
+
 struct gto_contracted
 {
-    Matrix<gto_single, Dynamic, 1> gto_list;
-    VectorXd coeff;
+    VectorXd coeff, exp_a;
+    int l, m;
 };
 
 
@@ -39,8 +35,8 @@ public:
     ~GTO();
 
     void readBasis(const string& atomName, const string& filename);
-
     void normalization();
+
     MatrixXd get_h1e(const string& integralTYPE);
     Matrix<MatrixXd, -1, -1> get_h2e();
 
@@ -48,8 +44,8 @@ public:
     double auxiliary_1e(const int& l, const double& a);
     double auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2);
     double auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2);
-    double int1e_single_gto(const gto_single& gto1, const gto_single& gto2, const string& integralTYPE);
-    double int2e_single_gto(const gto_single& gto1, const gto_single& gto2, const gto_single& gto3, const gto_single& gto4);
+    double int1e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const string& integralTYPE);
+    double int2e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const int& l3, const int& m3, const double& a3, const int& l4, const int& m4, const double& a4);
     
 };
 
