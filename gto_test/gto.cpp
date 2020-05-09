@@ -6,7 +6,6 @@
 #include<cmath>
 #include<complex>
 #include<omp.h>
-#include<wignerSymbols/wignerSymbols-cpp.h>
 #include<gsl/gsl_sf_coupling.h>
 #include"gto.h"
 using namespace std;

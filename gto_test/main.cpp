@@ -5,7 +5,6 @@
 #include<iomanip>
 #include<cmath>
 #include<ctime>
-#include<wignerSymbols/wignerSymbols-cpp.h>
 #include"gto.h"
 using namespace Eigen;
 using namespace std;
@@ -17,7 +16,7 @@ int main()
 {
     GTO test;
     clock_t startTime, endTime;
-    test.readBasis("Cu", "ccpvdz");
+    test.readBasis("C", "ccpvdz");
 
 
     int size = test.size;   

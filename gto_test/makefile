@@ -5,7 +5,7 @@ GSL = ~/apps/gsl-2.6
 MAIN = main.o gto.o
 
 test.exe: ${MAIN}
-	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} ${MAIN} -l gsl -l wignerSymbols  -o test.exe
+	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} ${MAIN} -l gsl -o test.exe
 
 
 %.o: %.cpp
