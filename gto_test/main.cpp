@@ -16,7 +16,7 @@ int main()
 {
     GTO test;
     clock_t startTime, endTime;
-    test.readBasis("C", "ccpvdz");
+    test.readBasis("Cu", "ccpvdz");
 
 
     int size = test.size;   

@@ -301,11 +301,11 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
     Matrix<MatrixXd, -1, -1> int_2e(size, size);
     #pragma omp parallel for
     for(int ii = 0; ii < size; ii++)
-    for(int jj = 0; jj < size; jj++)
+    for(int jj = 0; jj <= ii; jj++)
     {
         int_2e(ii,jj).resize(size, size);
         for(int kk = 0; kk < size; kk++)
-        for(int ll = 0; ll < size; ll++)
+        for(int ll = 0; ll <= kk; ll++)
         {
             int_2e(ii,jj)(kk,ll) = 0.0;
             if((gtos_c(ii).l+gtos_c(jj).l+gtos_c(kk).l+gtos_c(ll).l) % 2 || (gtos_c(ii).m+gtos_c(jj).m+gtos_c(kk).m+gtos_c(ll).m) % 2 || (gtos_c(ii).l*gtos_c(jj).l*gtos_c(kk).l*gtos_c(ll).l) < 0)
