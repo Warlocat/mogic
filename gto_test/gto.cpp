@@ -212,17 +212,16 @@ void GTO::readBasis(const string& atomName, const string& basisSet)
                     ifs >> shell_list(ishell).exp_a(ii);
                 for(int ii = 0; ii < orbitalInfo(2,ishell); ii++)
                 for(int jj = 0; jj < orbitalInfo(1,ishell); jj++)
+                {
                     ifs >> shell_list(ishell).coeff(ii,jj);
+                    shell_list(ishell).coeff(ii,jj) = shell_list(ishell).coeff(ii,jj) / sqrt(auxiliary_1e(2*shell_list(ishell).l + 2, 2 * shell_list(ishell).exp_a(ii)));
+                }
+                    
             }
         }       
     ifs.close();
 
-    
-    
-
     normalization();
-    for(int ii = 0; ii < size_shell; ii++)
-    cout << shell_list(ii).coeff << endl << endl;
 }
 
 

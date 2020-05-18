@@ -29,11 +29,9 @@ int main()
     
     startTime = clock();
     MatrixXd h1e = test.get_h1e("h1e");
-    cout << h1e << endl;
     endTime = clock();
-    cout << "1e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-
     cout << h1e << endl;
+    cout << "1e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
     // startTime = clock();
     // for(int ii = 0; ii < 100; ii++)
