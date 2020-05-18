@@ -1,5 +1,6 @@
 #include<iostream>
 #include<fstream>
+#include<iomanip>
 #include<Eigen/Dense>
 
 using namespace Eigen;
@@ -73,7 +74,7 @@ int main()
     }
 
     SelfAdjointEigenSolver<MatrixXd> solver(hamiltonian);
-    cout << solver.eigenvalues().block(0,0,10,1) << endl;   
+    cout << fixed << setprecision(8) <<  solver.eigenvalues().block(0,0,10,1) << endl;   
     return 0;
 }
 
