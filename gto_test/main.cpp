@@ -15,36 +15,42 @@ double f2(int l, double r2, double a);
 int main()
 {
     GTO test;
+    string atomName, basisSet;
     clock_t startTime, endTime;
-    test.readBasis("Cu", "ccpvdz");
-
-
-    int size = test.size;   
-    test.normalization();
-    Matrix<MatrixXd, -1, -1> h2e;
+    
+    ifstream ifs;
+    ifs.open("input");
+        ifs >> atomName >> basisSet;
+    ifs.close();
+    test.readBasis(atomName, basisSet);
+// exit(99);
+    // int size = test.size;   
+    // Matrix<MatrixXd, -1, -1> h2e;
     
     startTime = clock();
     MatrixXd h1e = test.get_h1e("h1e");
     endTime = clock();
+    cout << h1e << endl;
     cout << "1e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
-    startTime = clock();
-    h2e = test.get_h2e();
-    endTime = clock();
-    cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
+    // startTime = clock();
+    // for(int ii = 0; ii < 100; ii++)
+    //     h2e = test.get_h2e();
+    // endTime = clock();
+    // cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
-    ofstream ofs;
-    ofs.open("h2e.txt");
-        for(int ii = 0; ii < size; ii++)
-        for(int jj = 0; jj <= ii; jj++)
-        for(int kk = 0; kk < size; kk++)
-        for(int ll = 0; ll <= kk; ll++)
-        {
-            if(abs(h2e(ii,jj)(kk,ll)) > 1e-12)  ofs << setprecision(16) << h2e(ii,jj)(kk,ll) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << endl;
-        }
-    ofs.close();
+    // ofstream ofs;
+    // ofs.open("h2e.txt");
+    //     for(int ii = 0; ii < size; ii++)
+    //     for(int jj = 0; jj <= ii; jj++)
+    //     for(int kk = 0; kk < size; kk++)
+    //     for(int ll = 0; ll <= kk; ll++)
+    //     {
+    //         if(abs(h2e(ii,jj)(kk,ll)) > 1e-12)  ofs << setprecision(16) << h2e(ii,jj)(kk,ll) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << endl;
+    //     }
+    // ofs.close();
 
-    return 0;
+    // return 0;
 }
 
 

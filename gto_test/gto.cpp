@@ -73,7 +73,7 @@ double factorial(const int& n)
 */
 double wigner_3j(const int& l1, const int& l2, const int& l3, const int& m1, const int& m2, const int& m3)
 {
-    return gsl_sf_coupling_3j(2*l1,2*l2,2*l3,2*m1,2*m2,2*m3);
+    // return gsl_sf_coupling_3j(2*l1,2*l2,2*l3,2*m1,2*m2,2*m3);
 
 
     if(l3 > l1 + l2 || l3 < abs(l1 - l2) || m1 + m2 + m3 != 0)
@@ -104,7 +104,7 @@ double wigner_3j(const int& l1, const int& l2, const int& l3, const int& m1, con
         }
         else
         {
-            return gsl_sf_coupling_3j(L(0),L(1),L(2),M(0),M(1),M(2));
+            return gsl_sf_coupling_3j(2*L(0),2*L(1),2*L(2),2*M(0),2*M(1),2*M(2));
         }
         
     }
@@ -163,94 +163,65 @@ GTO::~GTO()
 /*
     Read basis file in gaussian format
 */
-void GTO::readBasis(const string& atomName, const string& filename)
+void GTO::readBasis(const string& atomName, const string& basisSet)
 {
     if(atomName == "H") atomN = 1;
     else if(atomName == "C") atomN = 6;
-    else if(atomName == "Cu") atomN = 29;
+    else if(atomName == "CU") atomN = 29;
+
+    string target = atomName + ":" + basisSet + " ", flags;
 
     ifstream ifs;
     int atom_position = 0, angularQN, nGTO, int_tmp;
-    string flag_atom = atomName + "     0", flags, all_info = "", flags_tmp;
-    size = 0;
-    ifs.open(filename);
+    
+    ifs.open("GENBAS");
         while (!ifs.eof())
         {
             getline(ifs,flags);
-            atom_position++;
-            if(flags == flag_atom) break;
+            flags.resize(target.size());
+            if(flags == target) 
+            {
+                getline(ifs,flags);
+                break;
+            }
         }
         if(ifs.eof())
         {
-            cout << "ERROR: can not find target atom (" + atomName + ") in the basis set file (" + filename + ")\n";
+            cout << "ERROR: can not find target basis (" + target + ") in the basis set file (GENBAS)\n";
             exit(99);
         }
         else
         {
-            while (true)
+            ifs >> size_shell;
+            MatrixXi orbitalInfo(3,size_shell);
+            shell_list.resize(size_shell);
+
+            for(int ii = 0; ii < 3; ii++)
+            for(int jj = 0; jj < size_shell; jj++)
             {
-                getline(ifs,flags);
-                if(flags == "****") break;
-                flags.resize(1);
-                if(flags == "S") size += 1;
-                else if(flags == "P") size += 3;
-                else if(flags == "D") size += 5;
-                else if(flags == "F") size += 7;
-                else if(flags == "G") size += 9;
-                else if(flags == "H") size += 11;
-                else if(flags == "I") size += 13;
-                else if(flags != " ")
-                {
-                    cout << "ERROR: " << flags << " orbital is not supported now." << endl;
-                    exit(99);
-                }
+                ifs >> orbitalInfo(ii,jj);
             }
-            gtos_c.resize(size);
+            size_gtoc = 0;
+            for(int ishell = 0; ishell < size_shell; ishell++)
+            {
+                size_gtoc += (2 * orbitalInfo(0,ishell) + 1) * orbitalInfo(1,ishell);
+                shell_list(ishell).l = orbitalInfo(0,ishell);
+                shell_list(ishell).coeff.resize(orbitalInfo(2,ishell),orbitalInfo(1,ishell));
+                shell_list(ishell).exp_a.resize(orbitalInfo(2,ishell));
+                for(int ii = 0; ii < orbitalInfo(2,ishell); ii++)   
+                    ifs >> shell_list(ishell).exp_a(ii);
+                for(int ii = 0; ii < orbitalInfo(2,ishell); ii++)
+                for(int jj = 0; jj < orbitalInfo(1,ishell); jj++)
+                {
+                    ifs >> shell_list(ishell).coeff(ii,jj);
+                    shell_list(ishell).coeff(ii,jj) = shell_list(ishell).coeff(ii,jj) / sqrt(auxiliary_1e(2*shell_list(ishell).l + 2, 2 * shell_list(ishell).exp_a(ii)));
+                }
+                    
+            }
         }       
     ifs.close();
-    // ifs.clear();
-    ifs.open(filename);
-        for(int ii = 0; ii < atom_position; ii++)   getline(ifs,flags);
-        int_tmp = 0;
-        while (true)
-        {
-            ifs >> flags;
-            if(flags == "****") break;
-            else ifs >> nGTO >> flags_tmp;
 
-            if(flags == "S") angularQN = 0;
-            else if(flags == "P") angularQN = 1;
-            else if(flags == "D") angularQN = 2;
-            else if(flags == "F") angularQN = 3;
-            else if(flags == "G") angularQN = 4;
-            else if(flags == "H") angularQN = 5;
-            else if(flags == "I") angularQN = 6;
-          
-            gtos_c(int_tmp).exp_a.resize(nGTO);
-            gtos_c(int_tmp).coeff.resize(nGTO);
-            gtos_c(int_tmp).l = angularQN;
-            gtos_c(int_tmp).m = -angularQN;
-
-            for(int ii = 0 ; ii < nGTO; ii++)
-            {
-                ifs >> gtos_c(int_tmp).exp_a(ii) >> gtos_c(int_tmp).coeff(ii);
-                gtos_c(int_tmp).coeff(ii) = gtos_c(int_tmp).coeff(ii) / sqrt(auxiliary_1e(2*gtos_c(int_tmp).l + 2, 2 * gtos_c(int_tmp).exp_a(ii)));
-            }
-            for(int ii = 1; ii < 2*angularQN + 1; ii++)
-            {
-                gtos_c(int_tmp + ii).exp_a.resize(nGTO);
-                gtos_c(int_tmp + ii).coeff.resize(nGTO);
-                gtos_c(int_tmp + ii).l = gtos_c(int_tmp).l;
-                gtos_c(int_tmp + ii).m = gtos_c(int_tmp).m + ii;
-                for(int jj = 0; jj < nGTO; jj++)
-                {
-                    gtos_c(int_tmp + ii).coeff(jj) = gtos_c(int_tmp).coeff(jj);
-                    gtos_c(int_tmp + ii).exp_a(jj) = gtos_c(int_tmp).exp_a(jj);
-                }
-            }
-            int_tmp += 2*angularQN + 1;
-        }   
-    ifs.close();
+    normalization();
 }
 
 
@@ -259,18 +230,27 @@ void GTO::readBasis(const string& atomName, const string& filename)
 */
 void GTO::normalization()
 {
-    for(int ss = 0; ss < size; ss++)
+    for(int ishell = 0; ishell < size_shell; ishell++)
     {
-        double tmp = 0.0;
-        int size_gtos = gtos_c(ss).coeff.rows();
+        int size_gtos = shell_list(ishell).coeff.rows();
+        MatrixXd norm_single_shell(size_gtos, size_gtos);
         for(int ii = 0; ii < size_gtos; ii++)
         for(int jj = 0; jj < size_gtos; jj++)
         {
-            tmp += gtos_c(ss).coeff(ii) * gtos_c(ss).coeff(jj) * auxiliary_1e(2+2*gtos_c(ss).l, gtos_c(ss).exp_a(ii)+gtos_c(ss).exp_a(jj));
+            norm_single_shell(ii,jj) = auxiliary_1e(2+2*shell_list(ishell).l, shell_list(ishell).exp_a(ii)+shell_list(ishell).exp_a(jj));
         }
-        gtos_c(ss).coeff = gtos_c(ss).coeff / sqrt(tmp);
+        for(int subshell = 0; subshell < shell_list(ishell).coeff.cols(); subshell++)
+        {
+            double tmp = 0.0;
+            for(int ii = 0; ii < size_gtos; ii++)
+            for(int jj = 0; jj < size_gtos; jj++)
+            {
+                tmp += shell_list(ishell).coeff(ii,subshell) * shell_list(ishell).coeff(jj,subshell) * norm_single_shell(ii,jj);
+            }
+            for(int ii = 0; ii < size_gtos; ii++)
+                shell_list(ishell).coeff(ii,subshell) = shell_list(ishell).coeff(ii,subshell) / sqrt(tmp);
+        }
     }
-    
     return;
 }
 
@@ -280,55 +260,91 @@ void GTO::normalization()
 */
 MatrixXd GTO::get_h1e(const string& intType)
 {
-    MatrixXd int_1e(size, size);
+    int int_tmp = 0;
+    MatrixXd int_1e(size_gtoc, size_gtoc);
     int_1e = int_1e * 0.0;
-    for(int ii = 0; ii < size; ii++)
-    for(int jj = 0; jj < size; jj++)
+
+    Matrix<MatrixXd, -1, 1> int_1e_shell(size_shell);
+    for(int ishell = 0; ishell < size_shell; ishell++)
     {
-        int size_ii = gtos_c(ii).coeff.rows(), size_jj = gtos_c(jj).coeff.rows();
-        for(int mm = 0; mm < size_ii; mm++)
-        for(int nn = 0; nn < size_jj; nn++)
+        int ll = shell_list(ishell).l;
+        int size_subshell = shell_list(ishell).coeff.cols(), size_gtos = shell_list(ishell).coeff.rows();
+        MatrixXd h1e_single_shell(size_gtos, size_gtos);
+        for(int ii = 0; ii < size_gtos; ii++)
+        for(int jj = 0; jj < size_gtos; jj++)
         {
-            int_1e(ii,jj) += gtos_c(ii).coeff(mm) * gtos_c(jj).coeff(nn) * int1e_single_gto(gtos_c(ii).l, gtos_c(ii).m, gtos_c(ii).exp_a(mm), gtos_c(jj).l, gtos_c(jj).m, gtos_c(jj).exp_a(nn), intType);
+            double a1 = shell_list(ishell).exp_a(ii), a2 = shell_list(ishell).exp_a(jj);
+            
+            if(intType == "overlap")  h1e_single_shell(ii,jj) = auxiliary_1e(2 + 2*ll, a1 + a2);
+            else if(intType == "nuc_attra")  h1e_single_shell(ii,jj) = -atomN * auxiliary_1e(1 + 2*ll, a1 + a2);
+            else if(intType == "kinetic")  h1e_single_shell(ii,jj) = a2 * (2*ll + 3) * auxiliary_1e(2 + 2*ll, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*ll, a1 + a2);
+            else if(intType == "h1e")  h1e_single_shell(ii,jj) = a2 * (2*ll + 3) * auxiliary_1e(2 + 2*ll, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*ll, a1 + a2) + -atomN * auxiliary_1e(1 + 2*ll, a1 + a2);
+            else if(intType == "p.Vp")  h1e_single_shell(ii,jj) = ((2*ll + 1) * ll * auxiliary_1e(2*ll-1, a1 + a2) - 2*ll*(a1 + a2)*auxiliary_1e(2*ll + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*ll + 3, a1 + a2)) * -atomN;
+            else
+            {
+                cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
+                exit(99);
+            }
         }
+
+        int_1e_shell(ishell).resize(size_subshell,size_subshell);
+        for(int ii = 0; ii < size_subshell; ii++)
+        for(int jj = 0; jj < size_subshell; jj++)
+        {
+            int_1e_shell(ishell)(ii,jj) = 0.0;
+            for(int mm = 0; mm < size_gtos; mm++)
+            for(int nn = 0; nn < size_gtos; nn++)
+            {
+                int_1e_shell(ishell)(ii,jj) += shell_list(ishell).coeff(mm, ii) * shell_list(ishell).coeff(nn, jj) * h1e_single_shell(mm,nn);
+            }
+        }
+
+
+        for(int ii = 0; ii < size_subshell; ii++)
+        for(int jj = 0; jj < size_subshell; jj++)
+        for(int kk = 0; kk < 2*ll+1; kk++)
+        {
+            int_1e(int_tmp + kk + ii * (2*ll+1), int_tmp + kk + jj * (2*ll+1)) = int_1e_shell(ishell)(ii,jj);
+        }
+        int_tmp += size_subshell * (2*ll+1);
     }
 
     return int_1e;
 }
 
-Matrix<MatrixXd, -1, -1> GTO::get_h2e()
-{
-    Matrix<MatrixXd, -1, -1> int_2e(size, size);
-    #pragma omp parallel for
-    for(int ii = 0; ii < size; ii++)
-    for(int jj = 0; jj <= ii; jj++)
-    {
-        int_2e(ii,jj).resize(size, size);
-        for(int kk = 0; kk < size; kk++)
-        for(int ll = 0; ll <= kk; ll++)
-        {
-            int_2e(ii,jj)(kk,ll) = 0.0;
-            if((gtos_c(ii).l+gtos_c(jj).l+gtos_c(kk).l+gtos_c(ll).l) % 2 || (gtos_c(ii).m+gtos_c(jj).m+gtos_c(kk).m+gtos_c(ll).m) % 2 || (gtos_c(ii).l*gtos_c(jj).l*gtos_c(kk).l*gtos_c(ll).l) < 0)
-            {
-                continue;
-            }
-            int size_i = gtos_c(ii).coeff.rows(), size_j = gtos_c(jj).coeff.rows(), size_k = gtos_c(kk).coeff.rows(), size_l = gtos_c(ll).coeff.rows();
-            for(int ni = 0; ni < size_i; ni++)
-            for(int nj = 0; nj < size_j; nj++)
-            for(int nk = 0; nk < size_k; nk++)
-            for(int nl = 0; nl < size_l; nl++)
-            int_2e(ii,jj)(kk,ll) += gtos_c(ii).coeff(ni) * gtos_c(jj).coeff(nj) * gtos_c(kk).coeff(nk) * gtos_c(ll).coeff(nl) * int2e_single_gto(gtos_c(ii).l, gtos_c(ii).m, gtos_c(ii).exp_a(ni), gtos_c(jj).l, gtos_c(jj).m, gtos_c(jj).exp_a(nj), gtos_c(kk).l, gtos_c(kk).m, gtos_c(kk).exp_a(nk), gtos_c(ll).l, gtos_c(ll).m, gtos_c(ll).exp_a(nl));
-        }
-    }
-    return int_2e;
-}
+// Matrix<MatrixXd, -1, -1> GTO::get_h2e()
+// {
+//     Matrix<MatrixXd, -1, -1> int_2e(size, size);
+//     #pragma omp parallel for
+//     for(int ii = 0; ii < size; ii++)
+//     for(int jj = 0; jj <= ii; jj++)
+//     {
+//         int_2e(ii,jj).resize(size, size);
+//         for(int kk = 0; kk < size; kk++)
+//         for(int ll = 0; ll <= kk; ll++)
+//         {
+//             int_2e(ii,jj)(kk,ll) = 0.0;
+//             if((gtos_list(ii).l+gtos_list(jj).l+gtos_list(kk).l+gtos_list(ll).l) % 2 || (gtos_list(ii).m+gtos_list(jj).m+gtos_list(kk).m+gtos_list(ll).m) % 2 || (gtos_list(ii).l*gtos_list(jj).l*gtos_list(kk).l*gtos_list(ll).l) < 0)
+//             {
+//                 continue;
+//             }
+//             int size_i = gtos_list(ii).coeff.rows(), size_j = gtos_list(jj).coeff.rows(), size_k = gtos_list(kk).coeff.rows(), size_l = gtos_list(ll).coeff.rows();
+//             for(int ni = 0; ni < size_i; ni++)
+//             for(int nj = 0; nj < size_j; nj++)
+//             for(int nk = 0; nk < size_k; nk++)
+//             for(int nl = 0; nl < size_l; nl++)
+//             int_2e(ii,jj)(kk,ll) += gtos_list(ii).coeff(ni) * gtos_list(jj).coeff(nj) * gtos_list(kk).coeff(nk) * gtos_list(ll).coeff(nl) * int2e_single_gto(gtos_list(ii).l, gtos_list(ii).m, gtos_list(ii).exp_a(ni), gtos_list(jj).l, gtos_list(jj).m, gtos_list(jj).exp_a(nj), gtos_list(kk).l, gtos_list(kk).m, gtos_list(kk).exp_a(nk), gtos_list(ll).l, gtos_list(ll).m, gtos_list(ll).exp_a(nl));
+//         }
+//     }
+//     return int_2e;
+// }
 
 
 
 /*
     auxiliary_1e is to evaluate \int_0^inf x^l exp(-ax^2) dx
 */
-double GTO::auxiliary_1e(const int& l, const double& a)
+inline double GTO::auxiliary_1e(const int& l, const double& a)
 {
     int n = l / 2;
     if(n*2 == l)    return double_factorial(2*n-1)/pow(a,n)/pow(2.0,n+1)*sqrt(M_PI/a);
@@ -355,7 +371,7 @@ double GTO::int1e_single_gto(const int& l1, const int& m1, const double& a1, con
 /*
     auxiliary_2e_0_r is to evaluate \int_0^inf \int_0^r2 r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
 */
-double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2)
+inline double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2)
 {
     int n1 = l1 / 2;
     if(n1 * 2 == l1)
@@ -378,7 +394,7 @@ double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, con
 /*
     auxiliary_2e_r_inf is to evaluate \int_0^inf \int_r2^inf r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
 */
-double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2)
+inline double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2)
 {
     int n1 = l1 / 2;
     if(n1 * 2 == l1)
