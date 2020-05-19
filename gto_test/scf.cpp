@@ -1,4 +1,5 @@
 #include"scf.h"
+#include<omp.h>
 #include<iostream>
 #include<iomanip>
 #include<fstream>
@@ -9,13 +10,8 @@ nelec_a(nelec_a_), nelec_b(nelec_b_), size_basis(size_basis_)
     overlap.resize(size_basis, size_basis);
     fock_a.resize(size_basis, size_basis);
     h1e.resize(size_basis, size_basis); h1e = h1e * 0.0;
-    h2e.resize(size_basis, size_basis);
-    for(int ii = 0; ii < size_basis; ii++)
-    for(int jj = 0; jj < size_basis; jj++)
-    {
-        h2e(ii,jj).resize(size_basis,size_basis);
-        h2e(ii,jj) = h2e(ii,jj) * 0.0;
-    }
+    h2e.resize(size_basis * (size_basis + 1) / 2, size_basis * (size_basis + 1) / 2); h2e = h2e * 0.0;
+
     readIntegrals("integral.txt");
     overlap_half_i = inverse_half(overlap);
 }
@@ -49,17 +45,11 @@ void SCF::readIntegrals(const string& filename)
             }
             else
             {
-                h2e(indices(0) - 1, indices(1) - 1)(indices(2) - 1, indices(3) - 1) = tmp;
-                h2e(indices(1) - 1, indices(0) - 1)(indices(2) - 1, indices(3) - 1) = tmp;
-                h2e(indices(0) - 1, indices(1) - 1)(indices(3) - 1, indices(2) - 1) = tmp;
-                h2e(indices(1) - 1, indices(0) - 1)(indices(3) - 1, indices(2) - 1) = tmp;
-                h2e(indices(2) - 1, indices(3) - 1)(indices(0) - 1, indices(1) - 1) = tmp;
-                h2e(indices(2) - 1, indices(3) - 1)(indices(1) - 1, indices(0) - 1) = tmp;
-                h2e(indices(3) - 1, indices(2) - 1)(indices(0) - 1, indices(1) - 1) = tmp;
-                h2e(indices(3) - 1, indices(2) - 1)(indices(1) - 1, indices(0) - 1) = tmp;
-            }           
-        }
-            
+                int ij = (indices(0) - 1) * indices(0) / 2 + indices(1) - 1, kl = (indices(2) - 1) * indices(2) / 2 + indices(3) - 1;
+                h2e(ij,kl) = tmp;
+                h2e(kl,ij) = tmp;
+            }
+        }            
     ifs.close();
 }
 
@@ -89,7 +79,6 @@ MatrixXd SCF::inverse_half(const MatrixXd& inputM)
 MatrixXd SCF::evaluateDensity(const MatrixXd& coeff_, const int& occ, const bool& spherical)
 {
     MatrixXd den(size_basis, size_basis);
-    
     if(!spherical)
     {
         for(int aa = 0; aa < size_basis; aa++)
@@ -131,13 +120,21 @@ void SCF::runSCF()
 
         for(int iter = 1; iter <= maxIter; iter++)
         {
+            #pragma omp parallel  for
             for(int mm = 0; mm < size_basis; mm++)
             for(int nn = 0; nn < size_basis; nn++)
             {
                 fock_a(mm,nn) = h1e(mm,nn);
                 for(int aa = 0; aa < size_basis; aa++)
                 for(int bb = 0; bb < size_basis; bb++)
-                    fock_a(mm,nn) += density_a(aa,bb) * (2.0 * h2e(aa,bb)(mm,nn) - h2e(aa,nn)(mm,bb));
+                {
+                    int ab, mn, an, mb;
+                    ab = max(aa,bb)*(max(aa,bb)+1)/2 + min(aa,bb);
+                    mn = max(mm,nn)*(max(mm,nn)+1)/2 + min(mm,nn);
+                    an = max(aa,nn)*(max(aa,nn)+1)/2 + min(aa,nn);
+                    mb = max(mm,bb)*(max(mm,bb)+1)/2 + min(mm,bb);
+                    fock_a(mm,nn) += density_a(aa,bb) * (2.0 * h2e(ab,mn) - h2e(an, mb));
+                }
             }
             eigensolverG(fock_a, overlap_half_i, ene_orb_a, coeff_a);
             newDen = evaluateDensity(coeff_a, nelec_a);
@@ -180,6 +177,7 @@ void SCF::runSCF()
 
         for(int iter = 1; iter <= maxIter; iter++)
         {
+            #pragma omp parallel  for
             for(int mm = 0; mm < size_basis; mm++)
             for(int nn = 0; nn < size_basis; nn++)
             {
@@ -188,18 +186,26 @@ void SCF::runSCF()
                 for(int aa = 0; aa < size_basis; aa++)
                 for(int bb = 0; bb < size_basis; bb++)
                 {
-                    fock_a(mm,nn) += density_total(aa,bb) * h2e(aa,bb)(mm,nn) - density_a(aa,bb) * h2e(aa,nn)(mm,bb);
-                    fock_b(mm,nn) += density_total(aa,bb) * h2e(aa,bb)(mm,nn) - density_b(aa,bb) * h2e(aa,nn)(mm,bb);
-                }    
+                    int ab, mn, an, mb;
+                    ab = max(aa,bb)*(max(aa,bb)+1)/2 + min(aa,bb);
+                    mn = max(mm,nn)*(max(mm,nn)+1)/2 + min(mm,nn);
+                    an = max(aa,nn)*(max(aa,nn)+1)/2 + min(aa,nn);
+                    mb = max(mm,bb)*(max(mm,bb)+1)/2 + min(mm,bb);
+                    fock_a(mm,nn) += density_total(aa,bb) * h2e(ab,mn) - density_a(aa,bb) * h2e(an, mb);
+                    fock_b(mm,nn) += density_total(aa,bb) * h2e(ab,mn) - density_b(aa,bb) * h2e(an, mb);
+                }
             }
             eigensolverG(fock_a, overlap_half_i, ene_orb_a, coeff_a);
             eigensolverG(fock_b, overlap_half_i, ene_orb_b, coeff_b);
             newDen_a = evaluateDensity(coeff_a, nelec_a);
             newDen_b = evaluateDensity(coeff_b, nelec_b);
+
             d_density_a = abs((density_a - newDen_a).maxCoeff());
             d_density_b = abs((density_b - newDen_b).maxCoeff());
             cout << "Iter #" << iter << " maximum density difference :\talpha " << d_density_a << "\t\tbeta " << d_density_b << endl;
             
+            // density_a = 0.5 * (newDen_a + density_a);
+            // density_b = 0.5 * (newDen_b + density_b);
             density_a = newDen_a;
             density_b = newDen_b;
             density_total = density_a + density_b;

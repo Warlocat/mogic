@@ -13,7 +13,7 @@ private:
     int nelec_a, nelec_b, size_basis;
     double d_density_a, d_density_b;
     MatrixXd overlap, overlap_half_i, h1e, fock_a, fock_b, density_a, density_b;
-    Matrix<MatrixXd,-1,-1> h2e;
+    MatrixXd h2e;
 public:
     MatrixXd coeff_a, coeff_b;
     bool converged = false;

@@ -481,7 +481,6 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
             int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
 
-            #pragma omp parallel  for
             for(int ii = 0; ii < size_subshell_i; ii++)
             for(int jj = 0; jj < size_subshell_j; jj++)
             for(int kk = 0; kk < size_subshell_k; kk++)
