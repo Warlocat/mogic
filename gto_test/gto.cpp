@@ -127,8 +127,9 @@ double wigner_3j_zeroM(const int& l1, const int& l2, const int& l3)
 }
 
 
-
-
+/* 
+    function used to evaluate spherical harmonics transition matrix 
+*/
 complex<double> U_SH_trans(const int& mu, const int& mm)
 {
     complex<double> result;
@@ -152,8 +153,149 @@ complex<double> U_SH_trans(const int& mu, const int& mm)
 }
 
 
-GTO::GTO()
+/*
+    construction function
+*/
+GTO::GTO(const string& atomName_, const string& basisSet_, const int& charge_, const int& spin_, const bool& relativistic_):
+atomName(atomName_), basisSet(basisSet_), charge(charge_), spin(spin_), relativistic(relativistic_)
 {
+    if(atomName == "H") atomNumber = 1;
+    else if(atomName == "HE") atomNumber = 2;
+    else if(atomName == "LI") atomNumber = 3;
+    else if(atomName == "BE") atomNumber = 4;
+    else if(atomName == "B") atomNumber = 5;
+    else if(atomName == "C") atomNumber = 6;
+    else if(atomName == "N") atomNumber = 7;
+    else if(atomName == "O") atomNumber = 8;
+    else if(atomName == "F") atomNumber = 9;
+    else if(atomName == "NE") atomNumber = 10;
+    else if(atomName == "NA") atomNumber = 11;
+    else if(atomName == "MG") atomNumber = 12;
+    else if(atomName == "AL") atomNumber = 13;
+    else if(atomName == "SI") atomNumber = 14;
+    else if(atomName == "P") atomNumber = 15;
+    else if(atomName == "S") atomNumber = 16;
+    else if(atomName == "CL") atomNumber = 17;
+    else if(atomName == "AR") atomNumber = 18;
+    else if(atomName == "K") atomNumber = 19;
+    else if(atomName == "CA") atomNumber = 20;
+    else if(atomName == "SC") atomNumber = 21;
+    else if(atomName == "TI") atomNumber = 22;
+    else if(atomName == "V") atomNumber = 23;
+    else if(atomName == "CR") atomNumber = 24;
+    else if(atomName == "MN") atomNumber = 25;
+    else if(atomName == "FE") atomNumber = 26;
+    else if(atomName == "CO") atomNumber = 27;
+    else if(atomName == "NI") atomNumber = 28;
+    else if(atomName == "CU") atomNumber = 29;
+    else if(atomName == "ZN") atomNumber = 30;
+    else if(atomName == "GA") atomNumber = 31;
+    else if(atomName == "GE") atomNumber = 32;
+    else if(atomName == "AS") atomNumber = 33;
+    else if(atomName == "SE") atomNumber = 34;
+    else if(atomName == "BR") atomNumber = 35;
+    else if(atomName == "KR") atomNumber = 36;
+    else if(atomName == "RB") atomNumber = 37;
+    else if(atomName == "SR") atomNumber = 38;
+    else if(atomName == "Y") atomNumber = 39;
+    else if(atomName == "ZR") atomNumber = 40;
+    else if(atomName == "NB") atomNumber = 41;
+    else if(atomName == "MO") atomNumber = 42;
+    else if(atomName == "TC") atomNumber = 43;
+    else if(atomName == "RU") atomNumber = 44;
+    else if(atomName == "RH") atomNumber = 45;
+    else if(atomName == "PD") atomNumber = 46;
+    else if(atomName == "AG") atomNumber = 47;
+    else if(atomName == "CD") atomNumber = 48;
+    else if(atomName == "IN") atomNumber = 49;
+    else if(atomName == "SN") atomNumber = 50;
+    else if(atomName == "SB") atomNumber = 51;
+    else if(atomName == "TE") atomNumber = 52;
+    else if(atomName == "I") atomNumber = 53;
+    else if(atomName == "XE") atomNumber = 54;
+    else if(atomName == "CS") atomNumber = 55;
+    else if(atomName == "BA") atomNumber = 56;
+    else if(atomName == "LA") atomNumber = 57;
+    else if(atomName == "CE") atomNumber = 58;
+    else if(atomName == "PR") atomNumber = 59;
+    else if(atomName == "ND") atomNumber = 60;
+    else if(atomName == "PM") atomNumber = 61;
+    else if(atomName == "SM") atomNumber = 62;
+    else if(atomName == "EU") atomNumber = 63;
+    else if(atomName == "GD") atomNumber = 64;
+    else if(atomName == "TB") atomNumber = 65;
+    else if(atomName == "DY") atomNumber = 66;
+    else if(atomName == "HO") atomNumber = 67;
+    else if(atomName == "ER") atomNumber = 68;
+    else if(atomName == "TM") atomNumber = 69;
+    else if(atomName == "YB") atomNumber = 70;
+    else if(atomName == "LU") atomNumber = 71;
+    else if(atomName == "HF") atomNumber = 72;
+    else if(atomName == "TA") atomNumber = 73;
+    else if(atomName == "W") atomNumber = 74;
+    else if(atomName == "RE") atomNumber = 75;
+    else if(atomName == "OS") atomNumber = 76;
+    else if(atomName == "IR") atomNumber = 77;
+    else if(atomName == "PT") atomNumber = 78;
+    else if(atomName == "AU") atomNumber = 79;
+    else if(atomName == "HG") atomNumber = 80;
+    else if(atomName == "TL") atomNumber = 81;
+    else if(atomName == "PB") atomNumber = 82;
+    else if(atomName == "BI") atomNumber = 83;
+    else if(atomName == "PO") atomNumber = 84;
+    else if(atomName == "AT") atomNumber = 85;
+    else if(atomName == "RN") atomNumber = 86;
+    else if(atomName == "FR") atomNumber = 87;
+    else if(atomName == "RA") atomNumber = 88;
+    else if(atomName == "AC") atomNumber = 89;
+    else if(atomName == "TH") atomNumber = 90;
+    else if(atomName == "PA") atomNumber = 91;
+    else if(atomName == "U") atomNumber = 92;
+    else if(atomName == "NP") atomNumber = 93;
+    else if(atomName == "PU") atomNumber = 94;
+    else if(atomName == "AM") atomNumber = 95;
+    else if(atomName == "CM") atomNumber = 96;
+    else if(atomName == "BK") atomNumber = 97;
+    else if(atomName == "CF") atomNumber = 98;
+    else if(atomName == "ES") atomNumber = 99;
+    else if(atomName == "FM") atomNumber = 100;
+    else if(atomName == "MD") atomNumber = 101;
+    else if(atomName == "NO") atomNumber = 102;
+    else if(atomName == "LR") atomNumber = 103; 
+    else 
+    {
+        cout << "ERROR: Atom name is not supported." << endl;
+        exit(99);
+    }
+
+    nelec = atomNumber - charge;
+    if((nelec%2 && (spin == 1 || spin == 3)) || (nelec%2 - 1) && spin == 2)
+    {
+        cout << "ERROR: Spin state is NOT consistent with charge!" << endl;
+        exit(99);
+    }
+    else
+    {
+        switch (spin)
+        {
+        case 1:
+        case 2:
+            nelec_b = nelec / 2;
+            break;
+        case 3:
+            nelec_b = nelec / 2 - 1;
+            break;
+        default:
+            cout << "ERROR: Spin state " << spin << " is NOT supported!" << endl;
+            exit(99);
+            break;
+        }
+        nelec_a = nelec - nelec_b;
+    }
+    
+
+    readBasis();
+    normalization();
 }
 
 GTO::~GTO()
@@ -161,14 +303,10 @@ GTO::~GTO()
 }
 
 /*
-    Read basis file in gaussian format
+    Read basis file in CFOUR format
 */
-void GTO::readBasis(const string& atomName, const string& basisSet)
+void GTO::readBasis()
 {
-    if(atomName == "H") atomN = 1;
-    else if(atomName == "C") atomN = 6;
-    else if(atomName == "CU") atomN = 29;
-
     string target = atomName + ":" + basisSet + " ", flags;
 
     ifstream ifs;
@@ -220,8 +358,6 @@ void GTO::readBasis(const string& atomName, const string& basisSet)
             }
         }       
     ifs.close();
-
-    normalization();
 }
 
 
@@ -276,10 +412,10 @@ MatrixXd GTO::get_h1e(const string& intType)
             double a1 = shell_list(ishell).exp_a(ii), a2 = shell_list(ishell).exp_a(jj);
             
             if(intType == "overlap")  h1e_single_shell(ii,jj) = auxiliary_1e(2 + 2*ll, a1 + a2);
-            else if(intType == "nuc_attra")  h1e_single_shell(ii,jj) = -atomN * auxiliary_1e(1 + 2*ll, a1 + a2);
+            else if(intType == "nuc_attra")  h1e_single_shell(ii,jj) = -atomNumber * auxiliary_1e(1 + 2*ll, a1 + a2);
             else if(intType == "kinetic")  h1e_single_shell(ii,jj) = a2 * (2*ll + 3) * auxiliary_1e(2 + 2*ll, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*ll, a1 + a2);
-            else if(intType == "h1e")  h1e_single_shell(ii,jj) = a2 * (2*ll + 3) * auxiliary_1e(2 + 2*ll, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*ll, a1 + a2) + -atomN * auxiliary_1e(1 + 2*ll, a1 + a2);
-            else if(intType == "p.Vp")  h1e_single_shell(ii,jj) = ((2*ll + 1) * ll * auxiliary_1e(2*ll-1, a1 + a2) - 2*ll*(a1 + a2)*auxiliary_1e(2*ll + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*ll + 3, a1 + a2)) * -atomN;
+            else if(intType == "h1e")  h1e_single_shell(ii,jj) = a2 * (2*ll + 3) * auxiliary_1e(2 + 2*ll, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*ll, a1 + a2) + -atomNumber * auxiliary_1e(1 + 2*ll, a1 + a2);
+            else if(intType == "p.Vp")  h1e_single_shell(ii,jj) = ((2*ll + 1) * ll * auxiliary_1e(2*ll-1, a1 + a2) - 2*ll*(a1 + a2)*auxiliary_1e(2*ll + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*ll + 3, a1 + a2)) * -atomNumber;
             else
             {
                 cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
@@ -325,66 +461,73 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
     {
         int_2e(ii,jj).resize(size_gtoc, size_gtoc);
     }
-
-    // Matrix<Matrix<VectorXd, -1, -1>, -1, -1> radial[size_shell][size_shell][size_shell][size_shell];
-    
+  
     VectorXd angular, radial_tilde;
-    int int_tmp_i = 0;
-    for(int ishell = 0; ishell < size_shell; ishell++)
+    if(!relativistic)
     {
-    int int_tmp_j = 0;
-    // for(int jshell = 0; jshell < size_shell; jshell++)
-    for(int jshell = 0; jshell <= ishell; jshell++)
-    {
-    int int_tmp_k = 0;
-    for(int kshell = 0; kshell < size_shell; kshell++)
-    {
-    int int_tmp_l = 0;
-    // for(int lshell = 0; lshell < size_shell; lshell++)
-    for(int lshell = 0; lshell <= kshell; lshell++)
-    {
-        int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
-        int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
-        int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
-
-        #pragma omp parallel  for
-        for(int ii = 0; ii < size_subshell_i; ii++)
-        for(int jj = 0; jj < size_subshell_j; jj++)
-        for(int kk = 0; kk < size_subshell_k; kk++)
-        for(int ll = 0; ll < size_subshell_l; ll++)
+        int int_tmp_i = 0;
+        for(int ishell = 0; ishell < size_shell; ishell++)
         {
-            radial_tilde.resize(Lmax+1);
-            angular.resize(Lmax+1);
-            radial_tilde = 0.0 * radial_tilde;
-            for(int iii = 0; iii < size_gtos_i; iii++)
-            for(int jjj = 0; jjj < size_gtos_j; jjj++)
-            for(int kkk = 0; kkk < size_gtos_k; kkk++)
-            for(int lll = 0; lll < size_gtos_l; lll++)
+        int int_tmp_j = 0;
+        for(int jshell = 0; jshell <= ishell; jshell++)
+        {
+        int int_tmp_k = 0;
+        for(int kshell = 0; kshell < size_shell; kshell++)
+        {
+        int int_tmp_l = 0;
+        for(int lshell = 0; lshell <= kshell; lshell++)
+        {
+            int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
+            int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
+            int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
+
+            #pragma omp parallel  for
+            for(int ii = 0; ii < size_subshell_i; ii++)
+            for(int jj = 0; jj < size_subshell_j; jj++)
+            for(int kk = 0; kk < size_subshell_k; kk++)
+            for(int ll = 0; ll < size_subshell_l; ll++)
             {
-                for(int tmp = 0; tmp <= Lmax; tmp++)
-                radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp);
+                radial_tilde.resize(Lmax+1);
+                angular.resize(Lmax+1);
+                radial_tilde = 0.0 * radial_tilde;
+                for(int iii = 0; iii < size_gtos_i; iii++)
+                for(int jjj = 0; jjj < size_gtos_j; jjj++)
+                for(int kkk = 0; kkk < size_gtos_k; kkk++)
+                for(int lll = 0; lll < size_gtos_l; lll++)
+                {
+                    // for(int tmp = 0; tmp <= Lmax; tmp++)
+                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                    radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp);
+                }
+
+                angular = angular * 0.0;
+                for(int mi = 0; mi < 2*l_i + 1; mi++)
+                for(int mj = 0; mj < 2*l_j + 1; mj++)
+                for(int mk = 0; mk < 2*l_k + 1; mk++)
+                for(int ml = 0; ml < 2*l_l + 1; ml++)
+                {
+                    // for(int tmp = 0; tmp <= Lmax; tmp++)    
+                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                    angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
+
+                    int_2e(int_tmp_i + mi + ii * (2*l_i + 1), int_tmp_j + mj + jj * (2*l_j + 1))(int_tmp_k + mk + kk * (2*l_k + 1), int_tmp_l + ml + ll * (2*l_l + 1)) = radial_tilde.transpose() * angular;
+                }    
             }
-
-            angular = angular * 0.0;
-            for(int mi = 0; mi < 2*l_i + 1; mi++)
-            for(int mj = 0; mj < 2*l_j + 1; mj++)
-            for(int mk = 0; mk < 2*l_k + 1; mk++)
-            for(int ml = 0; ml < 2*l_l + 1; ml++)
-            {
-                for(int tmp = 0; tmp <= Lmax; tmp++)    angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
-
-                int_2e(int_tmp_i + mi + ii * (2*l_i + 1), int_tmp_j + mj + jj * (2*l_j + 1))(int_tmp_k + mk + kk * (2*l_k + 1), int_tmp_l + ml + ll * (2*l_l + 1)) = radial_tilde.transpose() * angular;
-            }    
+            int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
         }
-        int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
+            int_tmp_k += shell_list(kshell).coeff.cols() * (2*shell_list(kshell).l+1);
+        }
+            int_tmp_j += shell_list(jshell).coeff.cols() * (2*shell_list(jshell).l+1);
+        }
+            int_tmp_i += shell_list(ishell).coeff.cols() * (2*shell_list(ishell).l+1);
+        }
     }
-        int_tmp_k += shell_list(kshell).coeff.cols() * (2*shell_list(kshell).l+1);
+    else
+    {
+        cout << "ERROR: Relativistic version is NOT supported now." << endl;
+        exit(99);
     }
-        int_tmp_j += shell_list(jshell).coeff.cols() * (2*shell_list(jshell).l+1);
-    }
-        int_tmp_i += shell_list(ishell).coeff.cols() * (2*shell_list(ishell).l+1);
-    }
-
+    
     return int_2e;
 }
 
@@ -399,23 +542,6 @@ inline double GTO::auxiliary_1e(const int& l, const double& a)
     if(n*2 == l)    return double_factorial(2*n-1)/pow(a,n)/pow(2.0,n+1)*sqrt(M_PI/a);
     else    return factorial(n)/2.0/pow(a,n+1);
 }
-
-
-double GTO::int1e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const string& integralTYPE)
-{
-    if(l1 != l2 || m1 != m2) return 0.0;
-    else if(integralTYPE == "overlap")  return auxiliary_1e(2 + 2*l1, a1 + a2);
-    else if(integralTYPE == "nuc_attra")  return -atomN * auxiliary_1e(1 + 2*l1, a1 + a2);
-    else if(integralTYPE == "kinetic")  return a2 * (2*l1 + 3) * auxiliary_1e(2 + 2*l1, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l1, a1 + a2);
-    else if(integralTYPE == "h1e")  return a2 * (2*l1 + 3) * auxiliary_1e(2 + 2*l1, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l1, a1 + a2) + -atomN * auxiliary_1e(1 + 2*l1, a1 + a2);
-    else if(integralTYPE == "p.Vp")  return ((2*l1 + 1) * l1 * auxiliary_1e(2*l1-1, a1 + a2) - 2*l1*(a1+a2)*auxiliary_1e(2*l1 + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*l1 + 3, a1 + a2)) * -atomN;
-    else
-    {
-        cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
-        exit(99);
-    }
-}
-
 
 /*
     auxiliary_2e_0_r is to evaluate \int_0^inf \int_0^r2 r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
@@ -463,61 +589,22 @@ inline double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double
     
 }
 
-
-
-double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4, const int& LL)
+/* 
+    evaluate 1e and 2e integrals in single gto basis, not used in current version 
+*/
+double GTO::int1e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const string& integralTYPE)
 {
-    if((l1+l2+l3+l4) % 2) return 0.0;
-    double radial = 0.0;
-    if((l1 + l2 + 2 + LL) % 2)
-    {
-        radial = auxiliary_2e_0_r(l1 + l2 + 2 + LL, l3 + l4 + 1 - LL, a1 + a2, a3 + a4)
-                + auxiliary_2e_0_r(l3 + l4 + 2 + LL, l1 + l2 + 1 - LL, a3 + a4, a1 + a2);
-    }
+    if(l1 != l2 || m1 != m2) return 0.0;
+    else if(integralTYPE == "overlap")  return auxiliary_1e(2 + 2*l1, a1 + a2);
+    else if(integralTYPE == "nuc_attra")  return -atomNumber * auxiliary_1e(1 + 2*l1, a1 + a2);
+    else if(integralTYPE == "kinetic")  return a2 * (2*l1 + 3) * auxiliary_1e(2 + 2*l1, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l1, a1 + a2);
+    else if(integralTYPE == "h1e")  return a2 * (2*l1 + 3) * auxiliary_1e(2 + 2*l1, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*l1, a1 + a2) + -atomNumber * auxiliary_1e(1 + 2*l1, a1 + a2);
+    else if(integralTYPE == "p.Vp")  return ((2*l1 + 1) * l1 * auxiliary_1e(2*l1-1, a1 + a2) - 2*l1*(a1+a2)*auxiliary_1e(2*l1 + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*l1 + 3, a1 + a2)) * -atomNumber;
     else
     {
-        radial = auxiliary_2e_r_inf(l3 + l4 + 1 - LL, l1 + l2 + 2 + LL, a3 + a4, a1 + a2)
-                + auxiliary_2e_r_inf(l1 + l2 + 1 - LL, l3 + l4 + 2 + LL, a1 + a2, a3 + a4);
+        cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
+        exit(99);
     }
-
-    return radial;
-}
-
-
-double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL)
-{
-    double angular = 0.0;
-    for(int mm = -LL; mm <= LL; mm++)
-    {
-        double tmp = 0.0;
-        for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
-        {
-            for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
-            {
-                for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
-                {
-                    for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
-                    {
-                        if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
-                        {
-                            tmp += 0.0;
-                        }
-                        else
-                        {
-                            tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
-                        }
-                        if(m_l == 0) break;
-                    }
-                    if(m_k == 0) break;
-                }
-                if(m_j == 0) break;
-            }
-            if(m_i == 0) break;
-        }
-        angular += tmp * pow(-1, mm) * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0)) * wigner_3j_zeroM(l1, l2, LL) * wigner_3j_zeroM(l3, l4, LL);
-    }
-
-    return angular;
 }
 
 double GTO::int2e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const int& l3, const int& m3, const double& a3, const int& l4, const int& m4, const double& a4)
@@ -580,3 +667,91 @@ double GTO::int2e_single_gto(const int& l1, const int& m1, const double& a1, con
     }    
 }
 
+
+
+/* 
+    evaluate radial part and angular part in 2e integrals 
+*/
+double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4, const int& LL)
+{
+    if((l1+l2+l3+l4) % 2) return 0.0;
+    double radial = 0.0;
+    if((l1 + l2 + 2 + LL) % 2)
+    {
+        radial = auxiliary_2e_0_r(l1 + l2 + 2 + LL, l3 + l4 + 1 - LL, a1 + a2, a3 + a4)
+                + auxiliary_2e_0_r(l3 + l4 + 2 + LL, l1 + l2 + 1 - LL, a3 + a4, a1 + a2);
+    }
+    else
+    {
+        radial = auxiliary_2e_r_inf(l3 + l4 + 1 - LL, l1 + l2 + 2 + LL, a3 + a4, a1 + a2)
+                + auxiliary_2e_r_inf(l1 + l2 + 1 - LL, l3 + l4 + 2 + LL, a1 + a2, a3 + a4);
+    }
+
+    return radial;
+}
+
+double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL)
+{
+    double angular = 0.0;
+    for(int mm = -LL; mm <= LL; mm++)
+    {
+        double tmp = 0.0;
+        for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
+        {
+            for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
+            {
+                for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
+                {
+                    for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
+                    {
+                        if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
+                        {
+                            tmp += 0.0;
+                        }
+                        else
+                        {
+                            tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
+                        }
+                        if(m_l == 0) break;
+                    }
+                    if(m_k == 0) break;
+                }
+                if(m_j == 0) break;
+            }
+            if(m_i == 0) break;
+        }
+        angular += tmp * pow(-1, mm) * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0)) * wigner_3j_zeroM(l1, l2, LL) * wigner_3j_zeroM(l3, l4, LL);
+    }
+
+    return angular;
+}
+
+
+/* 
+    write overlap, h1e and h2e for scf 
+*/
+void GTO::writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, Matrix<MatrixXd,-1,-1> h2e, const string& filename)
+{
+    ofstream ofs;
+    ofs.open(filename);
+        for(int ii = 0; ii < size_gtoc; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+        {
+            ofs << setprecision(16) << overlap(ii,jj) << "\t";
+        }
+        ofs << "\n";
+        for(int ii = 0; ii < size_gtoc; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+        for(int kk = 0; kk < size_gtoc; kk++)
+        for(int ll = 0; ll <= kk; ll++)
+        {
+            if(abs(h2e(ii,jj)(kk,ll)) > 1e-12)  ofs << setprecision(16) << h2e(ii,jj)(kk,ll) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\n";
+        }
+        for(int ii = 0; ii < size_gtoc; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+        {
+            if(abs(h1e(ii,jj)) > 1e-12) ofs << setprecision(16) << h1e(ii,jj) << "\t" << ii+1 << "\t" << jj+1 << "\t" << 0 << "\t" << 0 << "\n";
+        }
+        ofs << 0.0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\n";
+    ofs.close();
+}

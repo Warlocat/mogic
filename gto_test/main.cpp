@@ -6,46 +6,50 @@
 #include<cmath>
 #include<ctime>
 #include"gto.h"
+#include"scf.h"
 using namespace Eigen;
 using namespace std;
 
-double f1(int l, double r2, double a);
-double f2(int l, double r2, double a);
+
 
 int main()
 {
-    GTO test;
-    string atomName, basisSet;
+    int charge, spin;
+    string atomName, basisSet, flags, jobs;
     clock_t startTime, endTime;
     
     ifstream ifs;
     ifs.open("input");
-        ifs >> atomName >> basisSet;
+        ifs >> atomName >> basisSet >> charge >> flags >> spin >> flags >> jobs;
     ifs.close();
-    test.readBasis(atomName, basisSet);
+    GTO gto_test(atomName, basisSet, charge, spin);
 
-    int size = test.size_gtoc;
+    int size = gto_test.size_gtoc;
+    cout << "basis size: " << size << endl;
+
+    MatrixXd overlap = gto_test.get_h1e("overlap");
     
     startTime = clock();
-    MatrixXd h1e = test.get_h1e("h1e");
+    MatrixXd h1e = gto_test.get_h1e("h1e");
     endTime = clock();
     cout << "1e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
     startTime = clock();
-    Matrix<MatrixXd, -1, -1> h2e = test.get_h2e();
+    Matrix<MatrixXd, -1, -1> h2e = gto_test.get_h2e();
     endTime = clock();
     cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
-    ofstream ofs;
-    ofs.open("h2e.txt");
-        for(int ii = 0; ii < size; ii++)
-        for(int jj = 0; jj <= ii; jj++)
-        for(int kk = 0; kk < size; kk++)
-        for(int ll = 0; ll <= kk; ll++)
-        {
-            if(abs(h2e(ii,jj)(kk,ll)) > 1e-12)  ofs << setprecision(16) << h2e(ii,jj)(kk,ll) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << endl;
-        }
-    ofs.close();
+    gto_test.writeIntegrals(overlap, h1e, h2e, "integral.txt");
+
+    if(jobs == "SCF")
+    {
+        SCF scf_test(gto_test.nelec_a, gto_test.nelec_b, gto_test.size_gtoc);
+        startTime = clock();
+        scf_test.runSCF();
+        endTime = clock();
+        cout << "HF scf finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl; 
+    }
+    
 
     return 0;
 }
