@@ -312,9 +312,13 @@ MatrixXd GTO::get_h1e(const string& intType)
     return int_1e;
 }
 
+
+
+/*
+    Evaluate different two-electron integrals 
+*/
 Matrix<MatrixXd, -1, -1> GTO::get_h2e()
 {
-    int int_tmp_i = 0, int_tmp_j = 0, int_tmp_k = 0, int_tmp_l = 0;
     Matrix<MatrixXd, -1, -1> int_2e(size_gtoc, size_gtoc);
     for(int ii = 0; ii < size_gtoc; ii++)
     for(int jj = 0; jj < size_gtoc; jj++)
@@ -324,76 +328,61 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
 
     // Matrix<Matrix<VectorXd, -1, -1>, -1, -1> radial[size_shell][size_shell][size_shell][size_shell];
     
-    Matrix<Matrix<VectorXd, -1, -1>, -1, -1> angular[size_shell][size_shell][size_shell][size_shell];
-    Matrix<Matrix<VectorXd, -1, -1>, -1, -1> radial_tilde[size_shell][size_shell][size_shell][size_shell];
-
+    VectorXd angular, radial_tilde;
+    int int_tmp_i = 0;
     for(int ishell = 0; ishell < size_shell; ishell++)
-    for(int jshell = 0; jshell < size_shell; jshell++)
+    {
+    int int_tmp_j = 0;
+    // for(int jshell = 0; jshell < size_shell; jshell++)
+    for(int jshell = 0; jshell <= ishell; jshell++)
+    {
+    int int_tmp_k = 0;
     for(int kshell = 0; kshell < size_shell; kshell++)
-    for(int lshell = 0; lshell < size_shell; lshell++)
+    {
+    int int_tmp_l = 0;
+    // for(int lshell = 0; lshell < size_shell; lshell++)
+    for(int lshell = 0; lshell <= kshell; lshell++)
     {
         int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
         int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
         int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
 
-        // radial[ishell][jshell][kshell][lshell].resize(size_gtos_i, size_gtos_j);
-        angular[ishell][jshell][kshell][lshell].resize(2*l_i+1, 2*l_j+1);
-        radial_tilde[ishell][jshell][kshell][lshell].resize(size_subshell_i, size_subshell_j);
-
-        // for(int ii = 0; ii < size_gtos_i; ii++)
-        // for(int jj = 0; jj < size_gtos_j; jj++)
-        // {
-        //     radial[ishell][jshell][kshell][lshell](ii, jj).resize(size_gtos_k, size_gtos_l);
-        //     for(int kk = 0; kk < size_gtos_k; kk++)
-        //     for(int ll = 0; ll < size_gtos_l; ll++)
-        //     {
-        //         radial[ishell][jshell][kshell][lshell](ii, jj)(kk, ll) = int2e_get_radial(l_i, shell_list(ishell).exp_a(ii),l_j, shell_list(jshell).exp_a(jj), l_k, shell_list(kshell).exp_a(kk), l_l, shell_list(lshell).exp_a(ll));
-        //     }
-        // }
-
-        for(int ii = 0; ii < 2*l_i + 1; ii++)
-        for(int jj = 0; jj < 2*l_j + 1; jj++)
-        {
-            angular[ishell][jshell][kshell][lshell](ii,jj).resize(2*l_k+1, 2*l_l+1);
-            for(int kk = 0; kk < 2*l_k + 1; kk++)
-            for(int ll = 0; ll < 2*l_l + 1; ll++)
-            {
-                angular[ishell][jshell][kshell][lshell](ii, jj)(kk, ll) = int2e_get_angular(l_i, ii - l_i, l_j, jj - l_j, l_k, kk - l_k, l_l, ll - l_l);
-            }
-        }
-
+        #pragma omp parallel  for
         for(int ii = 0; ii < size_subshell_i; ii++)
         for(int jj = 0; jj < size_subshell_j; jj++)
+        for(int kk = 0; kk < size_subshell_k; kk++)
+        for(int ll = 0; ll < size_subshell_l; ll++)
         {
-            radial_tilde[ishell][jshell][kshell][lshell](ii,jj).resize(size_subshell_k, size_subshell_l);
-            for(int kk = 0; kk < size_subshell_k; kk++)
-            for(int ll = 0; ll < size_subshell_l; ll++)
+            radial_tilde.resize(Lmax+1);
+            angular.resize(Lmax+1);
+            radial_tilde = 0.0 * radial_tilde;
+            for(int iii = 0; iii < size_gtos_i; iii++)
+            for(int jjj = 0; jjj < size_gtos_j; jjj++)
+            for(int kkk = 0; kkk < size_gtos_k; kkk++)
+            for(int lll = 0; lll < size_gtos_l; lll++)
             {
-                radial_tilde[ishell][jshell][kshell][lshell](ii,jj)(kk,ll).resize(min(l_i + l_j, l_k + l_l));
-                radial_tilde[ishell][jshell][kshell][lshell](ii,jj)(kk,ll) = 0.0 * radial_tilde[ishell][jshell][kshell][lshell](ii,jj)(kk,ll);
-
-                for(int iii = 0; iii < size_gtos_i; iii++)
-                for(int jjj = 0; jjj < size_gtos_j; jjj++)
-                for(int kkk = 0; kkk < size_gtos_k; kkk++)
-                for(int lll = 0; lll < size_gtos_l; lll++)
-                {
-                    radial_tilde[ishell][jshell][kshell][lshell](ii,jj)(kk,ll) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii),l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll));
-                }
-
-                
-                for(int mi = 0; mi < 2*l_i + 1; mi++)
-                for(int mj = 0; mj < 2*l_j + 1; mj++)
-                for(int mk = 0; mk < 2*l_k + 1; mk++)
-                for(int ml = 0; ml < 2*l_l + 1; ml++)
-                {
-                    int_2e(int_tmp_i + mi + ii * (2*l_i + 1), int_tmp_j + mj + jj * (2*l_j + 1))(int_tmp_k + mk + kk * (2*l_k + 1), int_tmp_l + ml + ll * (2*l_l + 1)) = radial_tilde[ishell][jshell][kshell][lshell](ii,jj)(kk,ll).transpose() * angular[ishell][jshell][kshell][lshell](mi,mj)(mk,ml);
-                }
-                int_tmp_i += size_subshell_i * (2*l_i+1);
-                int_tmp_j += size_subshell_j * (2*l_j+1);
-                int_tmp_k += size_subshell_k * (2*l_k+1);
-                int_tmp_l += size_subshell_l * (2*l_l+1);
+                for(int tmp = 0; tmp <= Lmax; tmp++)
+                radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp);
             }
+
+            angular = angular * 0.0;
+            for(int mi = 0; mi < 2*l_i + 1; mi++)
+            for(int mj = 0; mj < 2*l_j + 1; mj++)
+            for(int mk = 0; mk < 2*l_k + 1; mk++)
+            for(int ml = 0; ml < 2*l_l + 1; ml++)
+            {
+                for(int tmp = 0; tmp <= Lmax; tmp++)    angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
+
+                int_2e(int_tmp_i + mi + ii * (2*l_i + 1), int_tmp_j + mj + jj * (2*l_j + 1))(int_tmp_k + mk + kk * (2*l_k + 1), int_tmp_l + ml + ll * (2*l_l + 1)) = radial_tilde.transpose() * angular;
+            }    
         }
+        int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
+    }
+        int_tmp_k += shell_list(kshell).coeff.cols() * (2*shell_list(kshell).l+1);
+    }
+        int_tmp_j += shell_list(jshell).coeff.cols() * (2*shell_list(jshell).l+1);
+    }
+        int_tmp_i += shell_list(ishell).coeff.cols() * (2*shell_list(ishell).l+1);
     }
 
     return int_2e;
@@ -476,66 +465,56 @@ inline double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double
 
 
 
-VectorXd GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4)
+double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4, const int& LL)
 {
-    int maxL = min(l1 + l2, l3 + l4);
-    VectorXd radial(maxL + 1);
-    radial = 0.0 * radial;
-    for(int ll = maxL; ll >= 0; ll = ll - 2)
+    if((l1+l2+l3+l4) % 2) return 0.0;
+    double radial = 0.0;
+    if((l1 + l2 + 2 + LL) % 2)
     {
-        if((l1 + l2 + 2 + ll) % 2)
-        {
-            radial(ll) = auxiliary_2e_0_r(l1 + l2 + 2 + ll, l3 + l4 + 1 - ll, a1 + a2, a3 + a4)
-                    + auxiliary_2e_0_r(l3 + l4 + 2 + ll, l1 + l2 + 1 - ll, a3 + a4, a1 + a2);
-        }
-        else
-        {
-            radial(ll) = auxiliary_2e_r_inf(l3 + l4 + 1 - ll, l1 + l2 + 2 + ll, a3 + a4, a1 + a2)
-                    + auxiliary_2e_r_inf(l1 + l2 + 1 - ll, l3 + l4 + 2 + ll, a1 + a2, a3 + a4);
-        }
+        radial = auxiliary_2e_0_r(l1 + l2 + 2 + LL, l3 + l4 + 1 - LL, a1 + a2, a3 + a4)
+                + auxiliary_2e_0_r(l3 + l4 + 2 + LL, l1 + l2 + 1 - LL, a3 + a4, a1 + a2);
+    }
+    else
+    {
+        radial = auxiliary_2e_r_inf(l3 + l4 + 1 - LL, l1 + l2 + 2 + LL, a3 + a4, a1 + a2)
+                + auxiliary_2e_r_inf(l1 + l2 + 1 - LL, l3 + l4 + 2 + LL, a1 + a2, a3 + a4);
     }
 
     return radial;
 }
 
 
-VectorXd GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4)
+double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL)
 {
-    int maxL = min(l1 + l2, l3 + l4);
-    VectorXd angular(maxL + 1);
-    angular = angular * 0.0;
-    for(int ll = maxL; ll >=0; ll = ll - 2)
+    double angular = 0.0;
+    for(int mm = -LL; mm <= LL; mm++)
     {
-        angular(ll) = 0.0;
-        for(int mm = -ll; mm <= ll; mm++)
+        double tmp = 0.0;
+        for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
         {
-            double tmp = 0.0;
-            for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
+            for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
             {
-                for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
+                for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
                 {
-                    for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
+                    for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
                     {
-                        for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
+                        if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
                         {
-                            if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
-                            {
-                                tmp += 0.0;
-                            }
-                            else
-                            {
-                                tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, ll, m_i, m_j, -mm) * wigner_3j(l3, l4, ll, m_k, m_l, mm);
-                            }
-                            if(m_l == 0) break;
+                            tmp += 0.0;
                         }
-                        if(m_k == 0) break;
+                        else
+                        {
+                            tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
+                        }
+                        if(m_l == 0) break;
                     }
-                    if(m_j == 0) break;
+                    if(m_k == 0) break;
                 }
-                if(m_i == 0) break;
+                if(m_j == 0) break;
             }
-            angular(ll) += tmp * pow(-1, mm) * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0)) * wigner_3j_zeroM(l1, l2, ll) * wigner_3j_zeroM(l3, l4, ll);
+            if(m_i == 0) break;
         }
+        angular += tmp * pow(-1, mm) * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0)) * wigner_3j_zeroM(l1, l2, LL) * wigner_3j_zeroM(l3, l4, LL);
     }
 
     return angular;

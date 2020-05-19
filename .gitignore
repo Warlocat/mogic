@@ -3,3 +3,5 @@
 *.exe
 *.o
 *.xyz
+pyscfx2ctest/01-spin_free_x2c.py
+gto_test/1
