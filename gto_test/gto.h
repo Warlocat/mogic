@@ -19,7 +19,6 @@ struct gto_contracted
     VectorXd exp_a;
     MatrixXd coeff;
     int l;
-    int m;
 };
 
 
@@ -47,6 +46,11 @@ public:
     inline double auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2);
     inline double auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2);
     double int1e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const string& integralTYPE);
+
+    VectorXd int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4);
+    VectorXd int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4);
+    
+    
     double int2e_single_gto(const int& l1, const int& m1, const double& a1, const int& l2, const int& m2, const double& a2, const int& l3, const int& m3, const double& a3, const int& l4, const int& m4, const double& a4);
     
 };
