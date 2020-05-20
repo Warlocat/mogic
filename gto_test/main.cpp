@@ -35,7 +35,7 @@ int main()
     cout << "1e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
     startTime = clock();
-    Matrix<MatrixXd, -1, -1> h2e = gto_test.get_h2e();
+    MatrixXd h2e = gto_test.get_h2e();
     endTime = clock();
     cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 

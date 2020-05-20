@@ -453,15 +453,9 @@ MatrixXd GTO::get_h1e(const string& intType)
 /*
     Evaluate different two-electron integrals 
 */
-Matrix<MatrixXd, -1, -1> GTO::get_h2e()
+MatrixXd GTO::get_h2e()
 {
-    Matrix<MatrixXd, -1, -1> int_2e(size_gtoc, size_gtoc);
-    for(int ii = 0; ii < size_gtoc; ii++)
-    for(int jj = 0; jj < size_gtoc; jj++)
-    {
-        int_2e(ii,jj).resize(size_gtoc, size_gtoc);
-    }
-  
+    MatrixXd int_2e(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);  int_2e = int_2e * 0.0;
     VectorXd angular, radial_tilde;
     if(!relativistic)
     {
@@ -494,9 +488,8 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
                 for(int kkk = 0; kkk < size_gtos_k; kkk++)
                 for(int lll = 0; lll < size_gtos_l; lll++)
                 {
-                    // for(int tmp = 0; tmp <= Lmax; tmp++)
                     for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                    radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp);
+                        radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp);
                 }
 
                 angular = angular * 0.0;
@@ -505,11 +498,13 @@ Matrix<MatrixXd, -1, -1> GTO::get_h2e()
                 for(int mk = 0; mk < 2*l_k + 1; mk++)
                 for(int ml = 0; ml < 2*l_l + 1; ml++)
                 {
-                    // for(int tmp = 0; tmp <= Lmax; tmp++)    
+                    int ei = int_tmp_i + mi + ii * (2*l_i + 1), ej = int_tmp_j + mj + jj * (2*l_j + 1), ek = int_tmp_k + mk + kk * (2*l_k + 1), el = int_tmp_l + ml + ll * (2*l_l + 1);
+                    if(ei < ej || ek < el) continue;
                     for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                    angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
-
-                    int_2e(int_tmp_i + mi + ii * (2*l_i + 1), int_tmp_j + mj + jj * (2*l_j + 1))(int_tmp_k + mk + kk * (2*l_k + 1), int_tmp_l + ml + ll * (2*l_l + 1)) = radial_tilde.transpose() * angular;
+                        angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
+                    
+                    int eij = ei*(ei+1)/2+ej, ekl = ek*(ek+1)/2+el;
+                    int_2e(eij,ekl) = radial_tilde.transpose() * angular;
                 }    
             }
             int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
@@ -729,7 +724,7 @@ double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const
 /* 
     write overlap, h1e and h2e for scf 
 */
-void GTO::writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, Matrix<MatrixXd,-1,-1> h2e, const string& filename)
+void GTO::writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, const MatrixXd& h2e, const string& filename)
 {
     ofstream ofs;
     ofs.open(filename);
@@ -744,7 +739,8 @@ void GTO::writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, Matrix<Ma
         for(int kk = 0; kk < size_gtoc; kk++)
         for(int ll = 0; ll <= kk; ll++)
         {
-            if(abs(h2e(ii,jj)(kk,ll)) > 1e-12)  ofs << setprecision(16) << h2e(ii,jj)(kk,ll) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\n";
+            int ij = ii * (ii + 1) / 2 + jj, kl = kk * (kk + 1) / 2 + ll;
+            if(abs(h2e(ij,kl)) > 1e-12)  ofs << setprecision(16) << h2e(ij,kl) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\n";
         }
         for(int ii = 0; ii < size_gtoc; ii++)
         for(int jj = 0; jj <= ii; jj++)

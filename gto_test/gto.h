@@ -71,7 +71,7 @@ public:
 
     /* return needed 1e and 2e integrals */
     MatrixXd get_h1e(const string& integralTYPE);
-    Matrix<MatrixXd, -1, -1> get_h2e();
+    MatrixXd get_h2e();
 
     /* auxiliary functions used to evaluate 1e and 2e intergals */
     inline double auxiliary_1e(const int& l, const double& a);
@@ -87,7 +87,7 @@ public:
     double int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL);
 
     /* write overlap, h1e and h2e for scf */
-    void writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, Matrix<MatrixXd,-1,-1> h2e, const string& filename);
+    void writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, const MatrixXd& h2e, const string& filename);
 };
 
 #endif
