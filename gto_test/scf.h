@@ -4,33 +4,68 @@
 #include<Eigen/Dense>
 #include<complex>
 #include<string>
+#include"gto.h"
 using namespace std;
 using namespace Eigen;
 
+
 class SCF
 {
-private:
+protected:
     int nelec_a, nelec_b, size_basis;
-    double d_density_a, d_density_b;
-    MatrixXd overlap, overlap_half_i, h1e, fock_a, fock_b, density_a, density_b;
-    MatrixXd h2e;
-public:
-    MatrixXd coeff_a, coeff_b;
-    bool converged = false;
-    VectorXd ene_orb_a, ene_orb_b;
-    int maxIter = 200;
-    double ene_hf, convControl = 1e-10;
-
-    SCF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
-    ~SCF();
+    MatrixXd overlap, overlap_half_i, h1e, h2e;
 
     void readIntegrals(const string& filename);
     MatrixXd inverse_half(const MatrixXd& inputM);
     MatrixXd evaluateDensity(const MatrixXd& coeff_, const int& nocc, const bool& spherical = false);
     void eigensolverG(const MatrixXd& inputM, const MatrixXd& s_h_i, VectorXd& values, MatrixXd& vectors);
+public:
+    bool converged = false;
+    int maxIter = 200;
+    double ene_scf, convControl = 1e-10;
 
-    void runSCF();
+    SCF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
+    SCF(const GTO& gto_);
+    virtual ~SCF();
+
+    virtual void runSCF() = 0;
 };
+
+class RHF: public SCF
+{
+private:
+    MatrixXd density, fock;
+    double d_density;
+public:
+    MatrixXd coeff;
+    VectorXd ene_orb;
+
+    RHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
+    RHF(const GTO& gto_);
+    virtual ~RHF();
+    virtual void runSCF();
+};
+
+
+class UHF: public SCF
+{
+private:
+    MatrixXd density_a, density_b, fock_a, fock_b;
+    double d_density_a, d_density_b;
+public:
+    MatrixXd coeff_a, coeff_b;
+    VectorXd ene_orb_a, ene_orb_b;
+
+    UHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
+    UHF(const GTO& gto_);
+    virtual ~UHF();
+    virtual void runSCF();
+};
+
+
+SCF* scf_init(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
+SCF* scf_init(const GTO& gto_);
+
 
 
 #endif

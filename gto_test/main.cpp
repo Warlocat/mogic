@@ -43,11 +43,13 @@ int main()
 
     if(jobs == "SCF")
     {
-        SCF scf_test(gto_test.nelec_a, gto_test.nelec_b, gto_test.size_gtoc);
+        SCF* ptr_scf = scf_init(gto_test);
+        
         startTime = clock();
-        scf_test.runSCF();
+        ptr_scf->runSCF();
         endTime = clock();
         cout << "HF scf finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl; 
+        delete ptr_scf;
     }
     
 
