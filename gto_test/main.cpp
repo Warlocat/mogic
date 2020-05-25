@@ -5,6 +5,7 @@
 #include<iomanip>
 #include<cmath>
 #include<ctime>
+#include<memory>
 #include"gto.h"
 #include"scf.h"
 using namespace Eigen;
@@ -43,13 +44,12 @@ int main()
 
     if(jobs == "SCF")
     {
-        SCF* ptr_scf = scf_init(gto_test);
+        shared_ptr<SCF> ptr_scf(scf_init(gto_test));
         
         startTime = clock();
         ptr_scf->runSCF();
         endTime = clock();
         cout << "HF scf finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl; 
-        delete ptr_scf;
     }
     
 
