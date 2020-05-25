@@ -24,8 +24,7 @@ public:
     int maxIter = 200;
     double ene_scf, convControl = 1e-10;
 
-    SCF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
-    SCF(const GTO& gto_);
+    SCF(const GTO& gto_, const string& h2e_file);
     virtual ~SCF();
 
     virtual void runSCF() = 0;
@@ -40,8 +39,7 @@ public:
     MatrixXd coeff;
     VectorXd ene_orb;
 
-    RHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
-    RHF(const GTO& gto_);
+    RHF(const GTO& gto_, const string& h2e_file);
     virtual ~RHF();
     virtual void runSCF();
 };
@@ -56,15 +54,13 @@ public:
     MatrixXd coeff_a, coeff_b;
     VectorXd ene_orb_a, ene_orb_b;
 
-    UHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
-    UHF(const GTO& gto_);
+    UHF(const GTO& gto_, const string& h2e_file);
     virtual ~UHF();
     virtual void runSCF();
 };
 
 
-SCF* scf_init(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
-SCF* scf_init(const GTO& gto_);
+SCF* scf_init(const GTO& gto_, const string& h2e_file);
 
 
 

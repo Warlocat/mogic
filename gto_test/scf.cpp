@@ -4,33 +4,19 @@
 #include<iomanip>
 #include<fstream>
 
-SCF* scf_init(const int& nelec_a_, const int& nelec_b_, const int& size_basis_)
-{
-    SCF* ptr_scf;
-    if(nelec_a_ == nelec_b_)
-    {
-        cout << "RHF program is used." << endl << endl;
-        ptr_scf = new RHF(nelec_a_,nelec_b_,size_basis_);
-    }
-    else
-    {
-        cout << "UHF program is used." << endl << endl;
-        ptr_scf = new UHF(nelec_a_,nelec_b_,size_basis_);
-    }
-    return ptr_scf;
-}
-SCF* scf_init(const GTO& gto_)
+
+SCF* scf_init(const GTO& gto_, const string& h2e_file)
 {
     SCF* ptr_scf;
     if(gto_.nelec_a == gto_.nelec_b)
     {
         cout << "RHF program is used." << endl << endl;
-        ptr_scf = new RHF(gto_);
+        ptr_scf = new RHF(gto_, h2e_file);
     }
     else
     {
         cout << "UHF program is used." << endl << endl;
-        ptr_scf = new UHF(gto_);
+        ptr_scf = new UHF(gto_, h2e_file);
     }
     return ptr_scf;
 }
@@ -41,27 +27,15 @@ SCF* scf_init(const GTO& gto_)
 /*********************************************************/
 
 
-
-
-SCF::SCF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_):
-nelec_a(nelec_a_), nelec_b(nelec_b_), size_basis(size_basis_)
-{
-    overlap.resize(size_basis, size_basis);
-    h1e.resize(size_basis, size_basis); h1e = h1e * 0.0;
-    h2e.resize(size_basis * (size_basis + 1) / 2, size_basis * (size_basis + 1) / 2); h2e = h2e * 0.0;
-
-    readIntegrals("integral.txt");
-    overlap_half_i = inverse_half(overlap);
-}
-
-SCF::SCF(const GTO& gto_):
+SCF::SCF(const GTO& gto_, const string& h2e_file):
 nelec_a(gto_.nelec_a), nelec_b(gto_.nelec_b), size_basis(gto_.size_gtoc)
 {
-    overlap.resize(size_basis, size_basis);
-    h1e.resize(size_basis, size_basis); h1e = h1e * 0.0;
+    overlap = gto_.get_h1e("overlap");
+    h1e = gto_.get_h1e("h1e");
+
     h2e.resize(size_basis * (size_basis + 1) / 2, size_basis * (size_basis + 1) / 2); h2e = h2e * 0.0;
 
-    readIntegrals("integral.txt");
+    readIntegrals(h2e_file);
     overlap_half_i = inverse_half(overlap);
 }
 
@@ -76,22 +50,10 @@ void SCF::readIntegrals(const string& filename)
     double tmp;
     VectorXi indices(4);
     ifs.open(filename);
-        for(int ii = 0; ii < size_basis; ii++)
-        for(int jj = 0; jj <= ii; jj++)
-        {
-            ifs >> overlap(ii,jj);
-            overlap(jj,ii) = overlap(ii,jj);
-        }
-        
         while(true)
         {
             ifs >> tmp >> indices(0) >> indices(1) >> indices(2) >> indices(3);
             if(indices(0) == 0) break;
-            else if (indices(2) == 0)
-            {
-                h1e(indices(0) - 1, indices(1) - 1) = tmp;
-                h1e(indices(1) - 1, indices(0) - 1) = tmp;
-            }
             else
             {
                 int ij = (indices(0) - 1) * indices(0) / 2 + indices(1) - 1, kl = (indices(2) - 1) * indices(2) / 2 + indices(3) - 1;
@@ -164,12 +126,8 @@ void SCF::eigensolverG(const MatrixXd& inputM, const MatrixXd& s_h_i, VectorXd& 
 /**********    Member functions of class RHF    **********/
 /*********************************************************/
 
-RHF::RHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_):
-SCF(nelec_a_, nelec_b_, size_basis_)
-{
-}
-RHF::RHF(const GTO& gto_):
-SCF(gto_)
+RHF::RHF(const GTO& gto_, const string& h2e_file):
+SCF(gto_, h2e_file)
 {
 }
 
@@ -244,12 +202,8 @@ void RHF::runSCF()
 /**********    Member functions of class UHF    **********/
 /*********************************************************/
 
-UHF::UHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_):
-SCF(nelec_a_, nelec_b_, size_basis_)
-{
-}
-UHF::UHF(const GTO& gto_):
-SCF(gto_)
+UHF::UHF(const GTO& gto_, const string& h2e_file):
+SCF(gto_, h2e_file)
 {
 }
 

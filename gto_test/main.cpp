@@ -28,23 +28,16 @@ int main()
     int size = gto_test.size_gtoc;
     cout << "basis size: " << size << endl;
 
-    MatrixXd overlap = gto_test.get_h1e("overlap");
-    
     startTime = clock();
-    MatrixXd h1e = gto_test.get_h1e("h1e");
-    endTime = clock();
-    cout << "1e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-
-    startTime = clock();
-    MatrixXd h2e = gto_test.get_h2e();
+    const MatrixXd h2e = gto_test.get_h2e();
     endTime = clock();
     cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
-    gto_test.writeIntegrals(overlap, h1e, h2e, "integral.txt");
+    gto_test.writeIntegrals(h2e, "h2e_"+atomName+".txt");
 
     if(jobs == "SCF")
     {
-        shared_ptr<SCF> ptr_scf(scf_init(gto_test));
+        shared_ptr<SCF> ptr_scf(scf_init(gto_test,"h2e_"+atomName+".txt"));
         
         startTime = clock();
         ptr_scf->runSCF();

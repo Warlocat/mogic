@@ -394,7 +394,7 @@ void GTO::normalization()
 /*
     Evaluate different one-electron integrals 
 */
-MatrixXd GTO::get_h1e(const string& intType)
+MatrixXd GTO::get_h1e(const string& intType) const
 {
     int int_tmp = 0;
     MatrixXd int_1e(size_gtoc, size_gtoc);
@@ -453,7 +453,7 @@ MatrixXd GTO::get_h1e(const string& intType)
 /*
     Evaluate different two-electron integrals 
 */
-MatrixXd GTO::get_h2e()
+MatrixXd GTO::get_h2e() const
 {
     MatrixXd int_2e(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);  int_2e = int_2e * 0.0;
     VectorXd angular, radial_tilde;
@@ -530,7 +530,7 @@ MatrixXd GTO::get_h2e()
 /*
     auxiliary_1e is to evaluate \int_0^inf x^l exp(-ax^2) dx
 */
-inline double GTO::auxiliary_1e(const int& l, const double& a)
+inline double GTO::auxiliary_1e(const int& l, const double& a) const
 {
     int n = l / 2;
     if(n*2 == l)    return double_factorial(2*n-1)/pow(a,n)/pow(2.0,n+1)*sqrt(M_PI/a);
@@ -540,7 +540,7 @@ inline double GTO::auxiliary_1e(const int& l, const double& a)
 /*
     auxiliary_2e_0_r is to evaluate \int_0^inf \int_0^r2 r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
 */
-inline double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2)
+inline double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& a1, const double& a2) const
 {
     int n1 = l1 / 2;
     if(n1 * 2 == l1)
@@ -563,7 +563,7 @@ inline double GTO::auxiliary_2e_0_r(const int& l1, const int& l2, const double& 
 /*
     auxiliary_2e_r_inf is to evaluate \int_0^inf \int_r2^inf r1^l1 r2^l2 exp(-a1 * r1^2) exp(-a2 * r2^2) dr1dr2
 */
-inline double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2)
+inline double GTO::auxiliary_2e_r_inf(const int& l1, const int& l2, const double& a1, const double& a2) const
 {
     int n1 = l1 / 2;
     if(n1 * 2 == l1)
@@ -666,7 +666,7 @@ double GTO::int2e_single_gto(const int& l1, const int& m1, const double& a1, con
 /* 
     evaluate radial part and angular part in 2e integrals 
 */
-double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4, const int& LL)
+double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4, const int& LL) const
 {
     if((l1+l2+l3+l4) % 2) return 0.0;
     double radial = 0.0;
@@ -684,7 +684,7 @@ double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, con
     return radial;
 }
 
-double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL)
+double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL) const
 {
     double angular = 0.0;
     for(int mm = -LL; mm <= LL; mm++)
@@ -724,16 +724,10 @@ double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const
 /* 
     write overlap, h1e and h2e for scf 
 */
-void GTO::writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, const MatrixXd& h2e, const string& filename)
+void GTO::writeIntegrals(const MatrixXd& h2e, const string& filename)
 {
     ofstream ofs;
-    ofs.open(filename);
-        for(int ii = 0; ii < size_gtoc; ii++)
-        for(int jj = 0; jj <= ii; jj++)
-        {
-            ofs << setprecision(16) << overlap(ii,jj) << "\t";
-        }
-        ofs << "\n";
+    ofs.open(filename);        
         for(int ii = 0; ii < size_gtoc; ii++)
         for(int jj = 0; jj <= ii; jj++)
         for(int kk = 0; kk < size_gtoc; kk++)
@@ -742,11 +736,7 @@ void GTO::writeIntegrals(const MatrixXd& overlap, const MatrixXd& h1e, const Mat
             int ij = ii * (ii + 1) / 2 + jj, kl = kk * (kk + 1) / 2 + ll;
             if(abs(h2e(ij,kl)) > 1e-12)  ofs << setprecision(16) << h2e(ij,kl) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\n";
         }
-        for(int ii = 0; ii < size_gtoc; ii++)
-        for(int jj = 0; jj <= ii; jj++)
-        {
-            if(abs(h1e(ii,jj)) > 1e-12) ofs << setprecision(16) << h1e(ii,jj) << "\t" << ii+1 << "\t" << jj+1 << "\t" << 0 << "\t" << 0 << "\n";
-        }
+        
         ofs << 0.0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\n";
     ofs.close();
 }
