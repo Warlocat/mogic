@@ -5,6 +5,7 @@
 #include<complex>
 #include<string>
 #include"gto.h"
+#include"x2c.h"
 using namespace std;
 using namespace Eigen;
 
@@ -16,15 +17,17 @@ protected:
     MatrixXd overlap, overlap_half_i, h1e, h2e;
 
     void readIntegrals(const string& filename);
-    MatrixXd inverse_half(const MatrixXd& inputM);
-    MatrixXd evaluateDensity(const MatrixXd& coeff_, const int& nocc, const bool& spherical = false);
-    void eigensolverG(const MatrixXd& inputM, const MatrixXd& s_h_i, VectorXd& values, MatrixXd& vectors);
+    static MatrixXd matrix_half_inverse(const MatrixXd& inputM);
+    static MatrixXd matrix_half(const MatrixXd& inputM);
+    static MatrixXd evaluateDensity(const MatrixXd& coeff_, const int& nocc, const bool& spherical = false);
+    static void eigensolverG(const MatrixXd& inputM, const MatrixXd& s_h_i, VectorXd& values, MatrixXd& vectors);
+    friend X2C;
 public:
     bool converged = false;
     int maxIter = 200;
     double ene_scf, convControl = 1e-10;
 
-    SCF(const GTO& gto_, const string& h2e_file);
+    SCF(const GTO& gto_, const string& h2e_file, const string& relativistic = "off");
     virtual ~SCF();
 
     virtual void runSCF() = 0;
@@ -39,7 +42,7 @@ public:
     MatrixXd coeff;
     VectorXd ene_orb;
 
-    RHF(const GTO& gto_, const string& h2e_file);
+    RHF(const GTO& gto_, const string& h2e_file, const string& relativistic);
     virtual ~RHF();
     virtual void runSCF();
 };
@@ -54,13 +57,13 @@ public:
     MatrixXd coeff_a, coeff_b;
     VectorXd ene_orb_a, ene_orb_b;
 
-    UHF(const GTO& gto_, const string& h2e_file);
+    UHF(const GTO& gto_, const string& h2e_file, const string& relativistic);
     virtual ~UHF();
     virtual void runSCF();
 };
 
 
-SCF* scf_init(const GTO& gto_, const string& h2e_file);
+SCF* scf_init(const GTO& gto_, const string& h2e_file, const string& relativistic = "off");
 
 
 

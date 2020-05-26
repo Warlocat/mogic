@@ -455,10 +455,10 @@ MatrixXd GTO::get_h1e(const string& intType) const
 */
 MatrixXd GTO::get_h2e() const
 {
-    MatrixXd int_2e(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);  int_2e = int_2e * 0.0;
-    VectorXd angular, radial_tilde;
     if(!relativistic)
     {
+        MatrixXd int_2e(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);  int_2e = int_2e * 0.0;
+        VectorXd angular, radial_tilde;
         int int_tmp_i = 0;
         for(int ishell = 0; ishell < size_shell; ishell++)
         {

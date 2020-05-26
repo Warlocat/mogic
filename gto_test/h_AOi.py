@@ -2,12 +2,12 @@ import pyscf, numpy
 from pyscf import gto, scf, tools
 
 mol = gto.M(
-    atom = 'C 0 0 0',
-    spin = 2,
+    atom = 'P 0 0 0',
+    spin = 1,
     basis = 'cc-pvdz'
 )
-mf = scf.UHF(mol)
-mf.kernel()
+#mf = scf.UHF(mol)
+mf = scf.UHF(mol).x2c().run()
 # dm = mf.make_rdm1()
 # s = mol.intor('int1e_ovlp')
 # mo_feak = numpy.eye(len(s))

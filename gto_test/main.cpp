@@ -8,6 +8,7 @@
 #include<memory>
 #include"gto.h"
 #include"scf.h"
+#include"x2c.h"
 using namespace Eigen;
 using namespace std;
 
@@ -44,7 +45,17 @@ int main()
         endTime = clock();
         cout << "HF scf finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl; 
     }
+    else if(jobs == "SCF_SFX2C1E")
+    {
+        shared_ptr<SCF> ptr_scf(scf_init(gto_test,"h2e_"+atomName+".txt", "sfx2c1e"));
+        
+        startTime = clock();
+        ptr_scf->runSCF();
+        endTime = clock();
+        cout << "HF (SFX2C 1E) scf finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl; 
+    }
     
+
 
     return 0;
 }
