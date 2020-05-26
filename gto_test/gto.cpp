@@ -156,8 +156,8 @@ complex<double> U_SH_trans(const int& mu, const int& mm)
 /*
     construction function
 */
-GTO::GTO(const string& atomName_, const string& basisSet_, const int& charge_, const int& spin_, const bool& relativistic_):
-atomName(atomName_), basisSet(basisSet_), charge(charge_), spin(spin_), relativistic(relativistic_)
+GTO::GTO(const string& atomName_, const string& basisSet_, const int& charge_, const int& spin_, const bool& uncontracted_):
+atomName(atomName_), basisSet(basisSet_), charge(charge_), spin(spin_), uncontracted(uncontracted_)
 {
     if(atomName == "H") atomNumber = 1;
     else if(atomName == "HE") atomNumber = 2;
@@ -310,7 +310,7 @@ void GTO::readBasis()
     string target = atomName + ":" + basisSet + " ", flags;
 
     ifstream ifs;
-    int atom_position = 0, angularQN, nGTO, int_tmp;
+    int int_tmp;
     
     ifs.open("GENBAS");
         while (!ifs.eof())
@@ -340,22 +340,28 @@ void GTO::readBasis()
                 ifs >> orbitalInfo(ii,jj);
             }
             size_gtoc = 0;
+            size_gtou = 0;
             for(int ishell = 0; ishell < size_shell; ishell++)
             {
+                size_gtou += (2 * orbitalInfo(0,ishell) + 1) * orbitalInfo(2,ishell);
                 size_gtoc += (2 * orbitalInfo(0,ishell) + 1) * orbitalInfo(1,ishell);
                 shell_list(ishell).l = orbitalInfo(0,ishell);
                 shell_list(ishell).coeff.resize(orbitalInfo(2,ishell),orbitalInfo(1,ishell));
                 shell_list(ishell).exp_a.resize(orbitalInfo(2,ishell));
+                shell_list(ishell).norm.resize(orbitalInfo(2,ishell));
                 for(int ii = 0; ii < orbitalInfo(2,ishell); ii++)   
+                {    
                     ifs >> shell_list(ishell).exp_a(ii);
+                    shell_list(ishell).norm(ii) = sqrt(auxiliary_1e(2*shell_list(ishell).l + 2, 2 * shell_list(ishell).exp_a(ii)));
+                }
                 for(int ii = 0; ii < orbitalInfo(2,ishell); ii++)
                 for(int jj = 0; jj < orbitalInfo(1,ishell); jj++)
                 {
                     ifs >> shell_list(ishell).coeff(ii,jj);
-                    shell_list(ishell).coeff(ii,jj) = shell_list(ishell).coeff(ii,jj) / sqrt(auxiliary_1e(2*shell_list(ishell).l + 2, 2 * shell_list(ishell).exp_a(ii)));
+                    // shell_list(ishell).coeff(ii,jj) = shell_list(ishell).coeff(ii,jj) / sqrt(auxiliary_1e(2*shell_list(ishell).l + 2, 2 * shell_list(ishell).exp_a(ii)));
                 }
-                    
             }
+
         }       
     ifs.close();
 }
@@ -373,7 +379,7 @@ void GTO::normalization()
         for(int ii = 0; ii < size_gtos; ii++)
         for(int jj = 0; jj < size_gtos; jj++)
         {
-            norm_single_shell(ii,jj) = auxiliary_1e(2+2*shell_list(ishell).l, shell_list(ishell).exp_a(ii)+shell_list(ishell).exp_a(jj));
+            norm_single_shell(ii,jj) = auxiliary_1e(2+2*shell_list(ishell).l, shell_list(ishell).exp_a(ii)+shell_list(ishell).exp_a(jj)) / shell_list(ishell).norm(ii) / shell_list(ishell).norm(jj);
         }
         for(int subshell = 0; subshell < shell_list(ishell).coeff.cols(); subshell++)
         {
@@ -394,23 +400,35 @@ void GTO::normalization()
 /*
     Evaluate different one-electron integrals 
 */
-MatrixXd GTO::get_h1e(const string& intType) const
+MatrixXd GTO::get_h1e(const string& intType, const bool& uncontracted_) const
 {
+    MatrixXd int_1e;
     int int_tmp = 0;
-    MatrixXd int_1e(size_gtoc, size_gtoc);
-    int_1e = int_1e * 0.0;
-
-    Matrix<MatrixXd, -1, 1> int_1e_shell(size_shell);
+    if(!uncontracted_)
+    {
+        int_1e.resize(size_gtoc, size_gtoc);
+        for(int ii = 0; ii < size_gtoc; ii++)
+        for(int jj = 0; jj < size_gtoc; jj++)
+            int_1e(ii,jj) = 0.0;
+    }
+    else
+    {
+        int_1e.resize(size_gtou, size_gtou);
+        for(int ii = 0; ii < size_gtou; ii++)
+        for(int jj = 0; jj < size_gtou; jj++)
+            int_1e(ii,jj) = 0.0;
+    }
+    
     for(int ishell = 0; ishell < size_shell; ishell++)
     {
         int ll = shell_list(ishell).l;
-        int size_subshell = shell_list(ishell).coeff.cols(), size_gtos = shell_list(ishell).coeff.rows();
+        int size_gtos = shell_list(ishell).coeff.rows();
         MatrixXd h1e_single_shell(size_gtos, size_gtos);
         for(int ii = 0; ii < size_gtos; ii++)
         for(int jj = 0; jj < size_gtos; jj++)
         {
             double a1 = shell_list(ishell).exp_a(ii), a2 = shell_list(ishell).exp_a(jj);
-            
+        
             if(intType == "overlap")  h1e_single_shell(ii,jj) = auxiliary_1e(2 + 2*ll, a1 + a2);
             else if(intType == "nuc_attra")  h1e_single_shell(ii,jj) = -atomNumber * auxiliary_1e(1 + 2*ll, a1 + a2);
             else if(intType == "kinetic")  h1e_single_shell(ii,jj) = a2 * (2*ll + 3) * auxiliary_1e(2 + 2*ll, a1 + a2) - 2 * a2 * a2 * auxiliary_1e(4 + 2*ll, a1 + a2);
@@ -421,30 +439,47 @@ MatrixXd GTO::get_h1e(const string& intType) const
                 cout << "ERROR: get_h1e is called for undefined type of integrals!" << endl;
                 exit(99);
             }
+
+            h1e_single_shell(ii,jj) = h1e_single_shell(ii,jj) / shell_list(ishell).norm(ii) / shell_list(ishell).norm(jj);
         }
 
-        int_1e_shell(ishell).resize(size_subshell,size_subshell);
-        for(int ii = 0; ii < size_subshell; ii++)
-        for(int jj = 0; jj < size_subshell; jj++)
+        if(!uncontracted_)
         {
-            int_1e_shell(ishell)(ii,jj) = 0.0;
-            for(int mm = 0; mm < size_gtos; mm++)
-            for(int nn = 0; nn < size_gtos; nn++)
+            int size_subshell = shell_list(ishell).coeff.cols();
+            Matrix<MatrixXd, -1, 1> int_1e_shell(size_shell);
+            int_1e_shell(ishell).resize(size_subshell,size_subshell);
+            for(int ii = 0; ii < size_subshell; ii++)
+            for(int jj = 0; jj < size_subshell; jj++)
             {
-                int_1e_shell(ishell)(ii,jj) += shell_list(ishell).coeff(mm, ii) * shell_list(ishell).coeff(nn, jj) * h1e_single_shell(mm,nn);
+                int_1e_shell(ishell)(ii,jj) = 0.0;
+                for(int mm = 0; mm < size_gtos; mm++)
+                for(int nn = 0; nn < size_gtos; nn++)
+                {
+                    int_1e_shell(ishell)(ii,jj) += shell_list(ishell).coeff(mm, ii) * shell_list(ishell).coeff(nn, jj) * h1e_single_shell(mm,nn);
+                }
             }
+
+            for(int ii = 0; ii < size_subshell; ii++)
+            for(int jj = 0; jj < size_subshell; jj++)
+            for(int kk = 0; kk < 2*ll+1; kk++)
+            {
+                int_1e(int_tmp + kk + ii * (2*ll+1), int_tmp + kk + jj * (2*ll+1)) = int_1e_shell(ishell)(ii,jj);
+            }
+            int_tmp += size_subshell * (2*ll+1);
         }
-
-
-        for(int ii = 0; ii < size_subshell; ii++)
-        for(int jj = 0; jj < size_subshell; jj++)
-        for(int kk = 0; kk < 2*ll+1; kk++)
+        else
         {
-            int_1e(int_tmp + kk + ii * (2*ll+1), int_tmp + kk + jj * (2*ll+1)) = int_1e_shell(ishell)(ii,jj);
+            for(int ii = 0; ii < size_gtos; ii++)
+            for(int jj = 0; jj < size_gtos; jj++)
+            for(int kk = 0; kk < 2*ll+1; kk++)
+            {
+                int_1e(int_tmp + kk + ii * (2*ll+1), int_tmp + kk + jj * (2*ll+1)) = h1e_single_shell(ii,jj);
+            }
+            int_tmp += size_gtos * (2*ll+1);
         }
-        int_tmp += size_subshell * (2*ll+1);
+        
     }
-
+    
     return int_1e;
 }
 
@@ -453,12 +488,27 @@ MatrixXd GTO::get_h1e(const string& intType) const
 /*
     Evaluate different two-electron integrals 
 */
-MatrixXd GTO::get_h2e() const
+MatrixXd GTO::get_h2e(const bool& uncontracted_) const
 {
-    if(!relativistic)
+    MatrixXd int_2e;
+    if(!uncontracted_)
     {
-        MatrixXd int_2e(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);  int_2e = int_2e * 0.0;
-        VectorXd angular, radial_tilde;
+        int_2e.resize(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);
+        for(int ii = 0; ii < size_gtoc*(size_gtoc+1)/2; ii++)
+        for(int jj = 0; jj < size_gtoc*(size_gtoc+1)/2; jj++)  
+            int_2e(ii,jj) = 0.0;
+    }
+    else
+    {
+        int_2e.resize(size_gtou*(size_gtou+1)/2, size_gtou*(size_gtou+1)/2);
+        for(int ii = 0; ii < size_gtou*(size_gtou+1)/2; ii++)
+        for(int jj = 0; jj < size_gtou*(size_gtou+1)/2; jj++)  
+            int_2e(ii,jj) = 0.0;
+    }
+    
+    VectorXd angular, radial_tilde;
+    if(!uncontracted_)
+    {
         int int_tmp_i = 0;
         for(int ishell = 0; ishell < size_shell; ishell++)
         {
@@ -468,7 +518,7 @@ MatrixXd GTO::get_h2e() const
         int int_tmp_k = 0;
         for(int kshell = 0; kshell < size_shell; kshell++)
         {
-        int int_tmp_l = 0;
+        int int_tmp_l = 0; 
         for(int lshell = 0; lshell <= kshell; lshell++)
         {
             int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
@@ -482,17 +532,22 @@ MatrixXd GTO::get_h2e() const
             {
                 radial_tilde.resize(Lmax+1);
                 angular.resize(Lmax+1);
-                radial_tilde = 0.0 * radial_tilde;
+                for(int iii = 0; iii < Lmax+1; iii++)
+                {
+                    radial_tilde(iii) = 0.0;
+                    angular(iii) = 0.0;
+                }
+
                 for(int iii = 0; iii < size_gtos_i; iii++)
                 for(int jjj = 0; jjj < size_gtos_j; jjj++)
                 for(int kkk = 0; kkk < size_gtos_k; kkk++)
                 for(int lll = 0; lll < size_gtos_l; lll++)
                 {
+                    double norm = shell_list(ishell).norm(iii) * shell_list(jshell).norm(jjj) * shell_list(kshell).norm(kkk) * shell_list(lshell).norm(lll);
                     for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                        radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp);
+                        radial_tilde(tmp) += shell_list(ishell).coeff(iii,ii) * shell_list(jshell).coeff(jjj,jj) * shell_list(kshell).coeff(kkk,kk) * shell_list(lshell).coeff(lll,ll) * int2e_get_radial(l_i, shell_list(ishell).exp_a(iii), l_j, shell_list(jshell).exp_a(jjj), l_k, shell_list(kshell).exp_a(kkk), l_l, shell_list(lshell).exp_a(lll), tmp) / norm;
                 }
 
-                angular = angular * 0.0;
                 for(int mi = 0; mi < 2*l_i + 1; mi++)
                 for(int mj = 0; mj < 2*l_j + 1; mj++)
                 for(int mk = 0; mk < 2*l_k + 1; mk++)
@@ -518,8 +573,63 @@ MatrixXd GTO::get_h2e() const
     }
     else
     {
-        cout << "ERROR: Relativistic version is NOT supported now." << endl;
-        exit(99);
+        int int_tmp_i = 0;
+        for(int ishell = 0; ishell < size_shell; ishell++)
+        {
+        int int_tmp_j = 0;
+        for(int jshell = 0; jshell <= ishell; jshell++)
+        {
+        int int_tmp_k = 0;
+        for(int kshell = 0; kshell < size_shell; kshell++)
+        {
+        int int_tmp_l = 0; 
+        for(int lshell = 0; lshell <= kshell; lshell++)
+        {
+            int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
+            int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
+
+            radial_tilde.resize(Lmax+1);
+            angular.resize(Lmax+1);
+            for(int ii = 0; ii < size_gtos_i; ii++)
+            for(int jj = 0; jj < size_gtos_j; jj++)
+            for(int kk = 0; kk < size_gtos_k; kk++)
+            for(int ll = 0; ll < size_gtos_l; ll++)
+            {
+                double norm = shell_list(ishell).norm(ii) * shell_list(jshell).norm(jj) * shell_list(kshell).norm(kk) * shell_list(lshell).norm(ll);
+                
+                /*
+                    radial_tilde in uncontracted case is the radial tensor
+                */
+                for(int iii = 0; iii < Lmax+1; iii++)
+                {
+                    radial_tilde(iii) = 0.0;
+                    angular(iii) = 0.0;
+                }
+                for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                        radial_tilde(tmp) = int2e_get_radial(l_i, shell_list(ishell).exp_a(ii), l_j, shell_list(jshell).exp_a(jj), l_k, shell_list(kshell).exp_a(kk), l_l, shell_list(lshell).exp_a(ll), tmp) / norm;
+
+                for(int mi = 0; mi < 2*l_i + 1; mi++)
+                for(int mj = 0; mj < 2*l_j + 1; mj++)
+                for(int mk = 0; mk < 2*l_k + 1; mk++)
+                for(int ml = 0; ml < 2*l_l + 1; ml++)
+                {
+                    int ei = int_tmp_i + mi + ii * (2*l_i + 1), ej = int_tmp_j + mj + jj * (2*l_j + 1), ek = int_tmp_k + mk + kk * (2*l_k + 1), el = int_tmp_l + ml + ll * (2*l_l + 1);
+                    if(ei < ej || ek < el) continue;
+                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                        angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
+                    
+                    int eij = ei*(ei+1)/2+ej, ekl = ek*(ek+1)/2+el;
+                    int_2e(eij,ekl) = radial_tilde.transpose() * angular;
+                }    
+            }
+            int_tmp_l += shell_list(lshell).coeff.rows() * (2*shell_list(lshell).l+1);
+        }
+            int_tmp_k += shell_list(kshell).coeff.rows() * (2*shell_list(kshell).l+1);
+        }
+            int_tmp_j += shell_list(jshell).coeff.rows() * (2*shell_list(jshell).l+1);
+        }
+            int_tmp_i += shell_list(ishell).coeff.rows() * (2*shell_list(ishell).l+1);
+        }
     }
     
     return int_2e;
@@ -722,19 +832,57 @@ double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const
 
 
 /* 
+    get contraction coefficients for uncontracted calculations 
+*/
+MatrixXd GTO::get_coeff_contraction() const
+{
+    MatrixXd coeff(size_gtou, size_gtoc);
+    for(int ii = 0; ii < size_gtou; ii++)
+    for(int jj = 0; jj < size_gtoc; jj++)
+        coeff(ii,jj) = 0.0;
+
+    int int_tmp1 = 0, int_tmp2 = 0;
+    for(int ishell = 0; ishell < size_shell; ishell++)
+    {
+        int ll = shell_list(ishell).l;
+        int size_contracted = shell_list(ishell).coeff.cols();
+        
+        for(int ii = 0; ii < shell_list(ishell).coeff.cols(); ii++)    
+        {   
+            for(int mm = 0; mm < 2*ll+1; mm++)
+            {
+                for(int jj = 0; jj < shell_list(ishell).coeff.rows(); jj++)
+                {    
+                    coeff(int_tmp2 + jj*(2*ll+1) + mm, int_tmp1) = shell_list(ishell).coeff(jj,ii);
+                }
+                int_tmp1 ++;
+            }
+        }   
+        int_tmp2 += shell_list(ishell).coeff.rows() * (2*ll+1);
+    }
+
+    return coeff;
+}
+
+
+
+
+/* 
     write overlap, h1e and h2e for scf 
 */
 void GTO::writeIntegrals(const MatrixXd& h2e, const string& filename)
 {
+    int size = round((-1.0+sqrt(1+8*h2e.rows()))/2.0);
+    
     ofstream ofs;
     ofs.open(filename);        
-        for(int ii = 0; ii < size_gtoc; ii++)
+        for(int ii = 0; ii < size; ii++)
         for(int jj = 0; jj <= ii; jj++)
-        for(int kk = 0; kk < size_gtoc; kk++)
+        for(int kk = 0; kk < size; kk++)
         for(int ll = 0; ll <= kk; ll++)
         {
             int ij = ii * (ii + 1) / 2 + jj, kl = kk * (kk + 1) / 2 + ll;
-            if(abs(h2e(ij,kl)) > 1e-12)  ofs << setprecision(16) << h2e(ij,kl) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\n";
+            if(abs(h2e(ij,kl)) > 1e-15)  ofs << setprecision(16) << h2e(ij,kl) << "\t" << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\n";
         }
         
         ofs << 0.0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\n";

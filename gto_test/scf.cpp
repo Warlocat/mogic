@@ -34,7 +34,7 @@ nelec_a(gto_.nelec_a), nelec_b(gto_.nelec_b), size_basis(gto_.size_gtoc)
     if(relativistic == "off")
         h1e = gto_.get_h1e("h1e");
     else if(relativistic == "sfx2c1e")
-        h1e = X2C::evaluate_h1e_x2c(overlap, gto_.get_h1e("kinetic"), gto_.get_h1e("p.Vp"), gto_.get_h1e("nuc_attra"));
+        h1e = X2C::evaluate_h1e_x2c(gto_.get_h1e("overlap", true), gto_.get_h1e("kinetic", true), gto_.get_h1e("p.Vp", true), gto_.get_h1e("nuc_attra", true), gto_.get_coeff_contraction());
     else
     {
         cout << "ERROR: UNSUPPORTED relativistic method used!" << endl;
@@ -42,7 +42,10 @@ nelec_a(gto_.nelec_a), nelec_b(gto_.nelec_b), size_basis(gto_.size_gtoc)
     }
     
 
-    h2e.resize(size_basis * (size_basis + 1) / 2, size_basis * (size_basis + 1) / 2); h2e = h2e * 0.0;
+    h2e.resize(size_basis * (size_basis + 1) / 2, size_basis * (size_basis + 1) / 2); 
+    for(int ii = 0; ii < size_basis * (size_basis + 1) / 2; ii++)
+    for(int jj = 0; jj < size_basis * (size_basis + 1) / 2; jj++)
+        h2e = h2e * 0.0;
 
     readIntegrals(h2e_file);
     overlap_half_i = matrix_half_inverse(overlap);
@@ -78,7 +81,10 @@ MatrixXd SCF::matrix_half_inverse(const MatrixXd& inputM)
 {
     int size = inputM.rows();
     SelfAdjointEigenSolver<MatrixXd> solver(inputM);
-    MatrixXd eigenvalues(size, size);   eigenvalues = eigenvalues * 0.0;
+    MatrixXd eigenvalues(size, size);
+    for(int ii = 0; ii < size; ii++)
+    for(int jj = 0; jj < size; jj++)
+        eigenvalues = eigenvalues * 0.0;
     MatrixXd eigenvectors = solver.eigenvectors();
     
     for(int ii = 0; ii < size; ii++)
@@ -102,7 +108,10 @@ MatrixXd SCF::matrix_half(const MatrixXd& inputM)
 {
     int size = inputM.rows();
     SelfAdjointEigenSolver<MatrixXd> solver(inputM);
-    MatrixXd eigenvalues(size, size);   eigenvalues = eigenvalues * 0.0;
+    MatrixXd eigenvalues(size, size);
+    for(int ii = 0; ii < size; ii++)
+    for(int jj = 0; jj < size; jj++)
+        eigenvalues = eigenvalues * 0.0;
     MatrixXd eigenvectors = solver.eigenvectors();
     
     for(int ii = 0; ii < size; ii++)

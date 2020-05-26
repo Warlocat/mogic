@@ -24,7 +24,7 @@ complex<double> U_SH_trans(const int& mu, const int& mm);
 */
 struct gto_contracted
 {
-    VectorXd exp_a;
+    VectorXd exp_a, norm;
     MatrixXd coeff;
     int l;
 };
@@ -46,7 +46,7 @@ struct gto_contracted
         atomName:           name of atom (all in capital letter)
         basisSet:           name of basis set (CFOUR basis set form)
     
-        relativistic:       for relativistic calculation
+        uncontracted:       for uncontracted calculation
 
         shell_list:         basis set information stored in 
                             the form of different angular shells
@@ -58,20 +58,20 @@ private:
 
 public:
     int atomNumber, charge, nelec, nelec_a, nelec_b, spin;
-    int size_gtoc, size_shell;
+    int size_gtoc, size_gtou, size_shell;
     string atomName, basisSet;
-    bool relativistic;
+    bool uncontracted;
 
     /* Construction and destruction functions*/
-    GTO(const string& atomName_, const string& basisSet_, const int& charge_ = 0, const int& spin_ = 1, const bool& relativistic_ = false);
+    GTO(const string& atomName_, const string& basisSet_, const int& charge_ = 0, const int& spin_ = 1, const bool& uncontracted_ = false);
     ~GTO();
     /* read basis set and normalization, used in construction functions*/
     void readBasis();
     void normalization();
 
     /* return needed 1e and 2e integrals */
-    MatrixXd get_h1e(const string& integralTYPE) const;
-    MatrixXd get_h2e() const;
+    MatrixXd get_h1e(const string& integralTYPE, const bool& uncontracted_ = false) const;
+    MatrixXd get_h2e(const bool& uncontracted_ = false) const;
 
     /* auxiliary functions used to evaluate 1e and 2e intergals */
     inline double auxiliary_1e(const int& l, const double& a) const;
@@ -85,6 +85,9 @@ public:
     /* evaluate radial part and angular part in 2e integrals */
     double int2e_get_radial(const int& l1, const double& a1, const int& l2, const double& a2, const int& l3, const double& a3, const int& l4, const double& a4, const int& LL) const;
     double int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL) const;
+
+    /* get contraction coefficients for uncontracted calculations */
+    MatrixXd get_coeff_contraction() const;
 
     /* write n_a, n_b, n_basis, and h2e for scf */
     void writeIntegrals(const MatrixXd& h2e, const string& filename);

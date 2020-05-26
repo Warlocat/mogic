@@ -69,7 +69,7 @@ from pyscf import scf
 from pyscf import x2c
 
 mol = gto.M(
-    atom = '''H  0.  0.  0.''',
+    atom = '''Cu  0.  0.  0.''',
     spin = 1,
     basis = 'cc-pvdz',
 )
@@ -84,28 +84,4 @@ s1 = s + reduce(numpy.dot, (x.T.conj(), t, x)) * (.5/c**2)
 
 mf = scf.RHF(mol).sfx2c1e()
 mf.scf()
-
-
-
-R = _get_r(s, s1)
-print(R)
-exit()
-
-
-
-print('E = %.12f, ref = -76.075429084850' % mf.e_tot)
-
-
-mol.spin = 1
-mol.charge = 1
-mol.build(0, 0)
-
-# .x2c1e is the same to the .x2c method in the current implementation
-mf = scf.UKS(mol).x2c1e()
-energy = mf.kernel()
-print('E = %.12f, ref = -75.439160951099' % energy)
-
-# Switch off x2c
-mf.with_x2c = False
-energy = mf.kernel()
-print('E = %.12f, ref = %.12f' % (energy, scf.UKS(mol).kernel()))
+\

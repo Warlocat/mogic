@@ -8,8 +8,8 @@ using namespace std;
 using namespace Eigen;
 
 X2C::X2C(const GTO& gto_):
-size_basis(gto_.size_gtoc), S(gto_.get_h1e("overlap")), T(gto_.get_h1e("kinetic")), 
-W(gto_.get_h1e("p.Vp")), V(gto_.get_h1e("nuc_attra"))
+size_basis(gto_.size_gtou), S(gto_.get_h1e("overlap",true)), T(gto_.get_h1e("kinetic",true)), 
+W(gto_.get_h1e("p.Vp",true)), V(gto_.get_h1e("nuc_attra",true)), coeff_contraction(gto_.get_coeff_contraction())
 {
 }
 
@@ -83,7 +83,7 @@ MatrixXd X2C::get_R(const MatrixXd& S_, const MatrixXd& T_, const MatrixXd& X_)
 }
 
 
-MatrixXd X2C::evaluate_h1e_x2c(const MatrixXd& S_, const MatrixXd& T_, const MatrixXd& W_, const MatrixXd& V_)
+MatrixXd X2C::evaluate_h1e_x2c(const MatrixXd& S_, const MatrixXd& T_, const MatrixXd& W_, const MatrixXd& V_, const MatrixXd coeff_contraction_)
 {
     // MatrixXd X = get_X(S_, T_, W_, V_);
     // MatrixXd R = get_R(S_, T_, X);
@@ -96,8 +96,13 @@ MatrixXd X2C::evaluate_h1e_x2c(const MatrixXd& S_, const MatrixXd& T_, const Mat
     MatrixXd coeff_tmp(2*size, 2*size), coeff_large(size,size), coeff_small(size,size);
     VectorXd ene_tmp(2*size),ene_elec(size);
 
-    h_4C = h_4C * 0.0;
-    overlap_4C = overlap_4C * 0.0;
+    for(int ii = 0; ii < 2*size; ii++)
+    for(int jj = 0; jj < 2*size; jj++)
+    {
+        h_4C(ii,jj) = 0.0;
+        overlap_4C(ii,jj) = 0.0;
+    }
+    
     
     for(int ii = 0; ii < size; ii++)
     for(int jj = 0; jj < size; jj++)
@@ -135,5 +140,5 @@ MatrixXd X2C::evaluate_h1e_x2c(const MatrixXd& S_, const MatrixXd& T_, const Mat
             h1e(ii,jj) += tmp_mat.transpose()(ii,kk) * ene_elec(kk) * tmp_mat(kk,jj);
     }
 
-    return h1e;
+    return coeff_contraction_.transpose() * h1e * coeff_contraction_;
 }
