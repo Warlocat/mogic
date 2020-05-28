@@ -824,10 +824,10 @@ double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const
             }
             if(m_i == 0) break;
         }
-        angular += tmp * pow(-1, mm) * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0)) * wigner_3j_zeroM(l1, l2, LL) * wigner_3j_zeroM(l3, l4, LL);
+        angular += tmp * pow(-1, mm);
     }
 
-    return angular;
+    return angular * sqrt((2.0 * l1 + 1.0)*(2.0 * l2 + 1.0)*(2.0 * l3 + 1.0)*(2.0 * l4 + 1.0)) * wigner_3j_zeroM(l1, l2, LL) * wigner_3j_zeroM(l3, l4, LL);
 }
 
 

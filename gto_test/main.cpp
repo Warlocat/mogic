@@ -33,7 +33,7 @@ int main()
     cout << "size_u: " << size_u << endl;
 
     startTime = clock();
-    const MatrixXd h2e = gto_test.get_h2e();
+    const MatrixXd h2e = gto_test.get_h2e(unc);
     endTime = clock();
     cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 
