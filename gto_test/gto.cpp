@@ -796,34 +796,58 @@ double GTO::int2e_get_radial(const int& l1, const double& a1, const int& l2, con
 
 double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const int& m2, const int& l3, const int& m3, const int& l4, const int& m4, const int& LL) const
 {
+    if((l1+l2+LL)%2 || (l3+l4+LL)%2) return 0.0;
+
     double angular = 0.0;
     for(int mm = -LL; mm <= LL; mm++)
     {
         double tmp = 0.0;
+
+
         for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
         {
-            for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
+            for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
             {
-                for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
+                int m_j = mm - m_i, m_l = -mm - m_k;
+                if(abs(m1) != abs(m_i) || abs(m2) != abs(m_j) || abs(m3) != abs(m_k) || abs(m4) != abs(m_l))
                 {
-                    for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
-                    {
-                        if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
-                        {
-                            tmp += 0.0;
-                        }
-                        else
-                        {
-                            tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
-                        }
-                        if(m_l == 0) break;
-                    }
-                    if(m_k == 0) break;
+                    tmp += 0.0;
                 }
-                if(m_j == 0) break;
+                else
+                {
+                    tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
+                }        
+                if(m_k == 0) break;
             }
             if(m_i == 0) break;
         }
+
+
+        // for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
+        // {
+        //     for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
+        //     {
+        //         for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
+        //         {
+        //             for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
+        //             {
+        //                 if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
+        //                 {
+        //                     tmp += 0.0;
+        //                 }
+        //                 else
+        //                 {
+        //                     tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
+        //                 }
+        //                 if(m_l == 0) break;
+        //             }
+        //             if(m_k == 0) break;
+        //         }
+        //         if(m_j == 0) break;
+        //     }
+        //     if(m_i == 0) break;
+        // }
+
         angular += tmp * pow(-1, mm);
     }
 

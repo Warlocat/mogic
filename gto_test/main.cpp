@@ -36,7 +36,7 @@ int main()
     const MatrixXd h2e = gto_test.get_h2e(unc);
     endTime = clock();
     cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-
+exit(99);
     gto_test.writeIntegrals(h2e, "h2e_"+atomName+".txt");
 
     if(jobs == "SCF" && rel == "SFX2C1E")
