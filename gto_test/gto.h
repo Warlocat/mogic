@@ -22,8 +22,9 @@ complex<double> U_SH_trans(const int& mu, const int& mm);
 /*
     contracted gtos in form of angular shell
 */
-struct gto_contracted
+class gto_contracted
 {
+public:
     VectorXd exp_a, norm;
     MatrixXd coeff;
     int l;
@@ -53,7 +54,7 @@ struct gto_contracted
 */
 class GTO
 {
-private:
+protected:
     Matrix<gto_contracted, Dynamic, 1> shell_list; 
 
 public:
