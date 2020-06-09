@@ -40,6 +40,8 @@ int main()
     gto_spinor_test.writeIntegrals_spinor(h2eLLLL, "h2etestLLLL");    
     gto_spinor_test.writeIntegrals_spinor(h2eSSLL, "h2etestSSLL"); 
     gto_spinor_test.writeIntegrals_spinor(h2eSSSS, "h2etestSSSS"); 
+    DHF dhf_test(gto_spinor_test, "h2etest");
+    dhf_test.runSCF();
 
     return 0;
 }

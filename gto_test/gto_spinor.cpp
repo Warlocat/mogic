@@ -28,7 +28,7 @@ GTO_SPINOR::~GTO_SPINOR()
 */
 MatrixXd GTO_SPINOR::get_h1e(const string& intType, const bool& uncontracted_) const
 {
-    if(intType == "s_p_nuc_s_p" || intType == "i_s_pV_x_p" )
+    if(intType == "s_p_nuc_s_p" || intType == "s_p_s_p" )
     {
         MatrixXd int_1e;
         int int_tmp = 0;
@@ -56,8 +56,19 @@ MatrixXd GTO_SPINOR::get_h1e(const string& intType, const bool& uncontracted_) c
                 for(int jj = 0; jj < size_gtos; jj++)
                 {
                     double a1 = shell_list(ishell).exp_a(ii), a2 = shell_list(ishell).exp_a(jj);
-                    if(intType == "s_p_nuc_s_p")    h1e_single_shell(ii,jj) = (pow(ll + kappa + 1.0, 2) * auxiliary_1e(2*ll-1, a1 + a2) - 2.0*(ll + kappa + 1.0)*(a1 + a2)*auxiliary_1e(2*ll + 1, a1 + a2) + 4*a1*a2 * auxiliary_1e(2*ll + 3, a1 + a2)) * -atomNumber;
-                    else if(intType == "i_s_pV_x_p" )   h1e_single_shell(ii,jj) = (kappa + 1.0) * auxiliary_1e(2*ll-1, a1 + a2) * -atomNumber;
+                    if(intType == "s_p_nuc_s_p")
+                    {
+                        h1e_single_shell(ii,jj) = 4*a1*a2 * auxiliary_1e(2*ll + 3, a1 + a2);
+                        if(ll!=0)
+                            h1e_single_shell(ii,jj) += pow(ll + kappa + 1.0, 2) * auxiliary_1e(2*ll-1, a1 + a2) - 2.0*(ll + kappa + 1.0)*(a1 + a2)*auxiliary_1e(2*ll + 1, a1 + a2);
+                        h1e_single_shell(ii,jj) *= -atomNumber;
+                    }
+                    else if(intType == "s_p_s_p" )
+                    {
+                        h1e_single_shell(ii,jj) = 4*a1*a2 * auxiliary_1e(2*ll + 4, a1 + a2);
+                        if(ll!=0)
+                            h1e_single_shell(ii,jj) += pow(ll + kappa + 1.0, 2) * auxiliary_1e(2*ll, a1 + a2) - 2.0*(ll + kappa + 1.0)*(a1 + a2)*auxiliary_1e(2*ll + 2, a1 + a2);
+                    }
                     
                     h1e_single_shell(ii,jj) = h1e_single_shell(ii,jj) / shell_list(ishell).norm(ii) / shell_list(ishell).norm(jj);
                 }

@@ -5,6 +5,7 @@
 #include<complex>
 #include<string>
 #include"gto.h"
+#include"gto_spinor.h"
 #include"x2c.h"
 using namespace std;
 using namespace Eigen;
@@ -28,6 +29,7 @@ public:
     double ene_scf, convControl = 1e-10;
 
     SCF(const GTO& gto_, const string& h2e_file, const string& relativistic = "off");
+    SCF();
     virtual ~SCF();
 
     virtual void runSCF() = 0;
@@ -62,6 +64,25 @@ public:
     virtual void runSCF();
 };
 
+
+class DHF: public SCF
+{
+private:
+    /* In DHF, h1e is V and h2e is h2eLLLL */
+    MatrixXd overlap_4c, overlap_half_i_4c, kinetic, WWW, h2eSSLL, h2eSSSS;
+    MatrixXd density, fock_4c, h1e_4c;
+    double d_density;
+
+    static void readIntegrals(MatrixXd& h2e_, const string& filename);
+    static MatrixXd evaluateDensity_spinor(const MatrixXd& coeff_, const int& nocc, const bool& spherical = false);
+public:
+    MatrixXd coeff;
+    VectorXd ene_orb;
+
+    DHF(const GTO_SPINOR& gto_, const string& h2e_file);
+    virtual ~DHF();
+    virtual void runSCF();
+};
 
 SCF* scf_init(const GTO& gto_, const string& h2e_file, const string& relativistic = "off");
 
