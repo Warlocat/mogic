@@ -27,15 +27,19 @@ int main()
     clock_t startTime, endTime;
        
     GTO_SPINOR gto_spinor_test(atomName, basisSet, charge, spin);
+    cout << "size_c_spinor: " << gto_spinor_test.size_gtoc_spinor << endl;
+    cout << "size_u_spinor: " << gto_spinor_test.size_gtou_spinor << endl;
 
-    MatrixXd spnucsp = gto_spinor_test.get_h1e("s_p_nuc_s_p", unc);
-    MatrixXd w_sf = gto_spinor_test.get_h1e("p.Vp", unc), w_sd = gto_spinor_test.get_h1e("i_s_pV_x_p", unc);
+    // MatrixXd spnucsp = gto_spinor_test.get_h1e("s_p_nuc_s_p", unc);
+    // MatrixXd w_sf = gto_spinor_test.get_h1e("p.Vp", unc), w_sd = gto_spinor_test.get_h1e("i_s_pV_x_p", unc);
     // cout << (w_sf + w_sd - spnucsp).maxCoeff() << endl << endl;
-    for(int ii = 0; ii < spnucsp.rows(); ii++)
-    for(int jj = 0; jj < spnucsp.cols(); jj++)
-        cout << setprecision(16) << spnucsp(ii,jj) << endl;
 
-    
+    MatrixXd h2eLLLL = gto_spinor_test.get_h2e("LLLL",unc);
+    MatrixXd h2eSSLL = gto_spinor_test.get_h2e("SSLL",unc);
+    MatrixXd h2eSSSS = gto_spinor_test.get_h2e("SSSS",unc);
+    gto_spinor_test.writeIntegrals_spinor(h2eLLLL, "h2etestLLLL");    
+    gto_spinor_test.writeIntegrals_spinor(h2eSSLL, "h2etestSSLL"); 
+    gto_spinor_test.writeIntegrals_spinor(h2eSSSS, "h2etestSSSS"); 
 
     return 0;
 }

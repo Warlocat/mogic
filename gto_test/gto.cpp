@@ -37,6 +37,7 @@ double double_factorial(const int& n)
         if(n < 0)
         {
             cout << "ERROR: double_factorial is called for a negative number!" << endl;
+            cout << "n is " << n << endl;
             exit(99);
         }
         else return n * double_factorial(n - 2);
@@ -57,11 +58,12 @@ double factorial(const int& n)
     case 8: return 40320.0;
     case 9: return 362880.0;
     case 10: return 3628800.0;
-    
+
     default:
         if(n < 0)
         {
             cout << "ERROR: factorial is called for a negative number!" << endl;
+            cout << "n is " << n << endl;
             exit(99);
         }
         return n * factorial(n - 1);
@@ -75,8 +77,7 @@ double wigner_3j(const int& l1, const int& l2, const int& l3, const int& m1, con
 {
     // return gsl_sf_coupling_3j(2*l1,2*l2,2*l3,2*m1,2*m2,2*m3);
 
-
-    if(l3 > l1 + l2 || l3 < abs(l1 - l2) || m1 + m2 + m3 != 0)
+    if(l3 > l1 + l2 || l3 < abs(l1 - l2) || m1 + m2 + m3 != 0 || abs(m1) > abs(l1) || abs(m2) > abs(l2) || abs(m3) > abs(l3))
     {
         return 0.0;
     }
@@ -494,16 +495,12 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
     if(!uncontracted_)
     {
         int_2e.resize(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);
-        for(int ii = 0; ii < size_gtoc*(size_gtoc+1)/2; ii++)
-        for(int jj = 0; jj < size_gtoc*(size_gtoc+1)/2; jj++)  
-            int_2e(ii,jj) = 0.0;
+        int_2e = MatrixXd::Zero(size_gtoc*(size_gtoc+1)/2, size_gtoc*(size_gtoc+1)/2);
     }
     else
     {
         int_2e.resize(size_gtou*(size_gtou+1)/2, size_gtou*(size_gtou+1)/2);
-        for(int ii = 0; ii < size_gtou*(size_gtou+1)/2; ii++)
-        for(int jj = 0; jj < size_gtou*(size_gtou+1)/2; jj++)  
-            int_2e(ii,jj) = 0.0;
+        int_2e = MatrixXd::Zero(size_gtou*(size_gtou+1)/2, size_gtou*(size_gtou+1)/2);
     }
     
     VectorXd angular, radial_tilde;
@@ -522,6 +519,11 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
         for(int lshell = 0; lshell <= kshell; lshell++)
         {
             int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
+            if((l_i+l_j+l_k+l_l)%2) 
+            {
+                int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
+                continue;
+            }
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
             int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
 
@@ -586,6 +588,11 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
         for(int lshell = 0; lshell <= kshell; lshell++)
         {
             int l_i = shell_list(ishell).l, l_j = shell_list(jshell).l, l_k = shell_list(kshell).l, l_l = shell_list(lshell).l, Lmax = min(l_i + l_j, l_k +l_l);
+            if((l_i+l_j+l_k+l_l)%2) 
+            {
+                int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
+                continue;
+            }
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
 
             radial_tilde.resize(Lmax+1);
@@ -821,32 +828,6 @@ double GTO::int2e_get_angular(const int& l1, const int& m1, const int& l2, const
             }
             if(m_i == 0) break;
         }
-
-
-        // for(int m_i = -abs(m1); m_i <= abs(m1); m_i+=2*abs(m1))
-        // {
-        //     for(int m_j = -abs(m2); m_j <= abs(m2); m_j+=2*abs(m2))
-        //     {
-        //         for(int m_k = -abs(m3); m_k <= abs(m3); m_k+=2*abs(m3))
-        //         {
-        //             for(int m_l = -abs(m4); m_l <= abs(m4); m_l+=2*abs(m4))
-        //             {
-        //                 if(m_i + m_j - mm != 0 || m_k + m_l + mm != 0)
-        //                 {
-        //                     tmp += 0.0;
-        //                 }
-        //                 else
-        //                 {
-        //                     tmp += real(U_SH_trans(m1, m_i) * U_SH_trans(m2, m_j) * U_SH_trans(m3, m_k) * U_SH_trans(m4, m_l)) * wigner_3j(l1, l2, LL, m_i, m_j, -mm) * wigner_3j(l3, l4, LL, m_k, m_l, mm);
-        //                 }
-        //                 if(m_l == 0) break;
-        //             }
-        //             if(m_k == 0) break;
-        //         }
-        //         if(m_j == 0) break;
-        //     }
-        //     if(m_i == 0) break;
-        // }
 
         angular += tmp * pow(-1, mm);
     }
