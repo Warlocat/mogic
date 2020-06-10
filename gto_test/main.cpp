@@ -37,12 +37,12 @@ int main()
     endTime = clock();
     cout << "2e integrals finished in " << (endTime - startTime) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 // exit(99);
-    gto_test.writeIntegrals(h2e, "h2e_"+atomName+".txt");
+    // gto_test.writeIntegrals(h2e, "h2e_"+atomName+".txt");
 
     if(jobs == "SCF" && rel == "SFX2C1E")
     {
         cout << "SFX2C-1E procedure is used.\n";
-        shared_ptr<SCF> ptr_scf(scf_init(gto_test,"h2e_"+atomName+".txt", "sfx2c1e"));
+        shared_ptr<SCF> ptr_scf(scf_init(gto_test, h2e, "sfx2c1e"));
         
         startTime = clock();
         ptr_scf->runSCF();
@@ -52,7 +52,7 @@ int main()
     else if(jobs == "SCF")
     {
         cout << "Non-relativistic calculation is used.\n";
-        shared_ptr<SCF> ptr_scf(scf_init(gto_test, "h2e_"+atomName+".txt", "off"));
+        shared_ptr<SCF> ptr_scf(scf_init(gto_test, h2e, "off"));
         
         startTime = clock();
         ptr_scf->runSCF();

@@ -29,6 +29,7 @@ public:
     double ene_scf, convControl = 1e-10;
 
     SCF(const GTO& gto_, const string& h2e_file, const string& relativistic = "off");
+    SCF(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic = "off");
     SCF();
     virtual ~SCF();
 
@@ -45,6 +46,7 @@ public:
     VectorXd ene_orb;
 
     RHF(const GTO& gto_, const string& h2e_file, const string& relativistic);
+    RHF(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic);
     virtual ~RHF();
     virtual void runSCF();
 };
@@ -60,6 +62,7 @@ public:
     VectorXd ene_orb_a, ene_orb_b;
 
     UHF(const GTO& gto_, const string& h2e_file, const string& relativistic);
+    UHF(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic);
     virtual ~UHF();
     virtual void runSCF();
 };
@@ -79,12 +82,13 @@ public:
     MatrixXd coeff;
     VectorXd ene_orb;
 
-    DHF(const GTO_SPINOR& gto_, const string& h2e_file);
+    DHF(const GTO_SPINOR& gto_, const string& h2e_file, const bool& unc);
     virtual ~DHF();
     virtual void runSCF();
 };
 
 SCF* scf_init(const GTO& gto_, const string& h2e_file, const string& relativistic = "off");
+SCF* scf_init(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic = "off");
 
 
 

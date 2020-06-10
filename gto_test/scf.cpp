@@ -1,4 +1,5 @@
 #include"scf.h"
+#include"mkl_interface.h"
 #include<omp.h>
 #include<iostream>
 #include<iomanip>
@@ -17,6 +18,21 @@ SCF* scf_init(const GTO& gto_, const string& h2e_file, const string& relativisti
     {
         cout << "UHF program is used." << endl << endl;
         ptr_scf = new UHF(gto_, h2e_file, relativistic);
+    }
+    return ptr_scf;
+}
+SCF* scf_init(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic)
+{
+    SCF* ptr_scf;
+    if(gto_.nelec_a == gto_.nelec_b)
+    {
+        cout << "RHF program is used." << endl << endl;
+        ptr_scf = new RHF(gto_, h2e_, relativistic);
+    }
+    else
+    {
+        cout << "UHF program is used." << endl << endl;
+        ptr_scf = new UHF(gto_, h2e_, relativistic);
     }
     return ptr_scf;
 }
@@ -48,6 +64,21 @@ nelec_a(gto_.nelec_a), nelec_b(gto_.nelec_b), size_basis(gto_.size_gtoc)
         h2e = h2e * 0.0;
 
     readIntegrals(h2e_file);
+    overlap_half_i = matrix_half_inverse(overlap);
+}
+SCF::SCF(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic):
+nelec_a(gto_.nelec_a), nelec_b(gto_.nelec_b), size_basis(gto_.size_gtoc), h2e(h2e_)
+{
+    overlap = gto_.get_h1e("overlap");
+    if(relativistic == "off")
+        h1e = gto_.get_h1e("h1e");
+    else if(relativistic == "sfx2c1e")
+        h1e = X2C::evaluate_h1e_x2c(gto_.get_h1e("overlap", true), gto_.get_h1e("kinetic", true), gto_.get_h1e("p.Vp", true), gto_.get_h1e("nuc_attra", true), gto_.get_coeff_contraction());
+    else
+    {
+        cout << "ERROR: UNSUPPORTED relativistic method used!" << endl;
+        exit(99);
+    }
     overlap_half_i = matrix_half_inverse(overlap);
 }
 
@@ -179,6 +210,10 @@ RHF::RHF(const GTO& gto_, const string& h2e_file, const string& relativistic):
 SCF(gto_, h2e_file, relativistic)
 {
 }
+RHF::RHF(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic):
+SCF(gto_, h2e_, relativistic)
+{
+}
 
 RHF::~RHF()
 {
@@ -189,6 +224,9 @@ void RHF::runSCF()
     fock.resize(size_basis,size_basis);
 
     MatrixXd newDen;
+    // GeneralizedSelfAdjointEigenSolver<MatrixXd> gsolver(h1e, overlap);
+    // ene_orb = gsolver.eigenvalues();
+    // coeff = gsolver.eigenvectors();
     eigensolverG(h1e, overlap_half_i, ene_orb, coeff);
     density = evaluateDensity(coeff, nelec_a);
 
@@ -210,6 +248,9 @@ void RHF::runSCF()
                 fock(mm,nn) += density(aa,bb) * (2.0 * h2e(ab,mn) - h2e(an, mb));
             }
         }
+        // GeneralizedSelfAdjointEigenSolver<MatrixXd> gsolver(fock, overlap);
+        // ene_orb = gsolver.eigenvalues();
+        // coeff = gsolver.eigenvectors();
         eigensolverG(fock, overlap_half_i, ene_orb, coeff);
         newDen = evaluateDensity(coeff, nelec_a);
         d_density = abs((density - newDen).maxCoeff());
@@ -253,6 +294,10 @@ void RHF::runSCF()
 
 UHF::UHF(const GTO& gto_, const string& h2e_file, const string& relativistic):
 SCF(gto_, h2e_file, relativistic)
+{
+}
+UHF::UHF(const GTO& gto_, const MatrixXd& h2e_, const string& relativistic):
+SCF(gto_, h2e_, relativistic)
 {
 }
 
@@ -337,22 +382,22 @@ void UHF::runSCF()
 /**********    Member functions of class DHF    **********/
 /*********************************************************/
 
-DHF::DHF(const GTO_SPINOR& gto_, const string& h2e_file)
+DHF::DHF(const GTO_SPINOR& gto_, const string& h2e_file, const bool& unc)
 {
     nelec_a = gto_.nelec_a;
     nelec_b = gto_.nelec_b;
-    size_basis = gto_.size_gtoc_spinor;
+    if(unc)    size_basis = gto_.size_gtou_spinor;
+    else    size_basis = gto_.size_gtoc_spinor;
     /* In DHF, h1e is V and h2e is h2eLLLL */
-    overlap = gto_.get_h1e("overlap");
-    kinetic = gto_.get_h1e("s_p_s_p") / 2.0;
-    h1e = gto_.get_h1e("nuc_attra");
-    WWW = gto_.get_h1e("s_p_nuc_s_p");
+    overlap = gto_.get_h1e("overlap",unc);
+    kinetic = gto_.get_h1e("s_p_s_p",unc) / 2.0;
+    h1e = gto_.get_h1e("nuc_attra",unc);
+    WWW = gto_.get_h1e("s_p_nuc_s_p",unc);
 
     /*
         overlap_4c = [[S, 0], [0, T/2c^2]]
         h1e_4c = [[V, T], [T, W/4c^2 - T]]
     */
-
     h1e_4c.resize(size_basis*2,size_basis*2);
     overlap_4c.resize(size_basis*2,size_basis*2);
     h1e_4c = MatrixXd::Zero(size_basis*2,size_basis*2);
@@ -363,7 +408,8 @@ DHF::DHF(const GTO_SPINOR& gto_, const string& h2e_file)
         overlap_4c(ii,jj) = overlap(ii,jj);
         overlap_4c(size_basis+ii, size_basis+jj) = kinetic(ii,jj) / 2.0 / speedOfLight / speedOfLight;
         h1e_4c(ii,jj) = h1e(ii,jj);
-        h1e_4c(size_basis+ii,jj) = h1e_4c(ii,size_basis+jj) = kinetic(ii,jj);
+        h1e_4c(size_basis+ii,jj) = kinetic(ii,jj);
+        h1e_4c(ii,size_basis+jj) = kinetic(ii,jj);
         h1e_4c(size_basis+ii,size_basis+jj) = WWW(ii,jj)/4.0/speedOfLight/speedOfLight - kinetic(ii,jj);
     }
     overlap_half_i_4c = matrix_half_inverse(overlap_4c);
@@ -380,7 +426,6 @@ DHF::DHF(const GTO_SPINOR& gto_, const string& h2e_file)
     readIntegrals(h2eSSSS, h2e_file+"SSSS");
     h2eSSLL = h2eSSLL / 4.0 / pow(speedOfLight,2);
     h2eSSSS = h2eSSSS / 16.0 / pow(speedOfLight,4);
-    overlap_half_i = matrix_half_inverse(overlap);
 }
 
 DHF::~DHF()
@@ -413,13 +458,13 @@ void DHF::runSCF()
             }
         }
         eigensolverG(fock_4c, overlap_half_i_4c, ene_orb, coeff);
-        newDen = evaluateDensity(coeff, nelec_a+nelec_b);
+        newDen = evaluateDensity_spinor(coeff, nelec_a+nelec_b);
         d_density = abs((density - newDen).maxCoeff());
         cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
         
-        // density = newDen;
-        density = (density+newDen)/2.0;
-        convControl = 1e-7;
+        density = newDen;
+        // density = (density+newDen)/2.0;
+        convControl = 1e-8;
         if(d_density < convControl) 
         {
             converged = true;
@@ -471,12 +516,12 @@ MatrixXd DHF::evaluateDensity_spinor(const MatrixXd& coeff_, const int& nocc, co
 {
     int size = coeff_.cols()/2;
     MatrixXd den(2*size,2*size);
+    den = MatrixXd::Zero(2*size,2*size);
     if(!spherical)
     {
         for(int aa = 0; aa < size; aa++)
         for(int bb = 0; bb < size; bb++)
         {
-            den(aa,bb) = den(size+aa,bb) = den(aa,size+bb) = den(size+aa,size+bb) = 0.0;
             for(int ii = 0; ii < nocc; ii++)
             {
                 den(aa,bb) += coeff_(aa,ii+size) * coeff_(bb,ii+size);

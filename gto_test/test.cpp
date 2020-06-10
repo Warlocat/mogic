@@ -39,9 +39,18 @@ int main()
     MatrixXd h2eSSSS = gto_spinor_test.get_h2e("SSSS",unc);
     gto_spinor_test.writeIntegrals_spinor(h2eLLLL, "h2etestLLLL");    
     gto_spinor_test.writeIntegrals_spinor(h2eSSLL, "h2etestSSLL"); 
-    gto_spinor_test.writeIntegrals_spinor(h2eSSSS, "h2etestSSSS"); 
-    DHF dhf_test(gto_spinor_test, "h2etest");
+    gto_spinor_test.writeIntegrals_spinor(h2eSSSS, "h2etestSSSS");
+    
+    DHF dhf_test(gto_spinor_test,"h2etest",unc);
     dhf_test.runSCF();
+
+    // int size = round(sqrt(h2eLLLL.cols()));
+
+    // for(int ii = 6; ii < 10; ii ++)
+    // for(int jj = 6; jj < 10; jj ++)
+    // for(int kk = 6; kk < 10; kk ++)
+    // for(int ll = 6; ll < 10; ll ++)
+    //     cout << h2eLLLL(ii*size+jj,kk*size+ll) << endl;
 
     return 0;
 }
