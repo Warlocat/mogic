@@ -78,6 +78,6 @@ void readInput(const string filename)
         ifs >> jobs >> flags;
         ifs >> rel >> flags;
         ifs >> unc >> flags;
-        cout << atomName << endl << basisSet <<endl << charge<< endl << spin << endl << jobs << endl << rel << endl << unc << endl;
+        cout << atomName << endl << basisSet <<endl << charge << endl << spin << endl << jobs << endl << rel << endl << unc << endl;
     ifs.close();
 }

@@ -1,5 +1,5 @@
 CPP = icpc
-CPPFLAG = -O3 -std=c++11 -qopenmp -mkl
+CPPFLAG = -O3 -fast -std=c++11 -qopenmp -mkl -fp-model precise
 EIGEN = ~/apps/Eigen3
 GSL = ~/apps/gsl-2.6
 MAIN = main.o gto.o scf.o x2c.o gto_spinor.o  
