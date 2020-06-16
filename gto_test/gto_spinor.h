@@ -10,7 +10,7 @@ using namespace Eigen;
 
 
 /*
-    Class for single-atom (single-center) integrals in j-adopted spinor basis.
+    Class for single-atom (single-center) integrals in 2-spinor basis.
     Derived from class GTO.
 
     Variables:

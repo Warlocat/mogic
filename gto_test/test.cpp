@@ -31,6 +31,10 @@ int main()
     cout << "size_u_spinor: " << gto_spinor_test.size_gtou_spinor << endl;
 
     // MatrixXd spnucsp = gto_spinor_test.get_h1e("s_p_nuc_s_p", unc);
+    // for(int ii = 0; ii < spnucsp.rows(); ii++)
+    // for(int jj = 0; jj < spnucsp.cols(); jj++)
+        // cout << ii+1 << "\t" << jj+1 << "\t" << spnucsp(ii,jj) <<"\n";
+    // exit(99);
     // MatrixXd w_sf = gto_spinor_test.get_h1e("p.Vp", unc), w_sd = gto_spinor_test.get_h1e("i_s_pV_x_p", unc);
     // cout << (w_sf + w_sd - spnucsp).maxCoeff() << endl << endl;
 
@@ -40,8 +44,10 @@ int main()
     gto_spinor_test.writeIntegrals_spinor(h2eLLLL, "h2etestLLLL");    
     gto_spinor_test.writeIntegrals_spinor(h2eSSLL, "h2etestSSLL"); 
     gto_spinor_test.writeIntegrals_spinor(h2eSSSS, "h2etestSSSS");
+    DHF dhf_test(gto_spinor_test, h2eLLLL, h2eSSLL, h2eSSSS, unc);
     
-    DHF dhf_test(gto_spinor_test,"h2etest",unc);
+    // DHF dhf_test("h1epyscf", "h2epyscf");
+    
     dhf_test.runSCF();
 
     // int size = round(sqrt(h2eLLLL.cols()));
@@ -50,7 +56,7 @@ int main()
     // for(int jj = 6; jj < 10; jj ++)
     // for(int kk = 6; kk < 10; kk ++)
     // for(int ll = 6; ll < 10; ll ++)
-    //     cout << h2eLLLL(ii*size+jj,kk*size+ll) << endl;
+    //     cout << setprecision(16) << h2eSSSS(ii*size+jj,kk*size+ll) << endl;
 
     return 0;
 }

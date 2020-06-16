@@ -8,6 +8,7 @@
 using namespace std;
 using namespace Eigen;
 
+// const double speedOfLight = 13.7; // for debug
 const double speedOfLight = 137.03599967994;
 
 class X2C

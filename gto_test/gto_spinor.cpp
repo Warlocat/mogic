@@ -37,7 +37,6 @@ MatrixXd GTO_SPINOR::get_h1e(const string& intType, const bool& uncontracted_) c
     }
     else
     {
-        cout << size_gtou_spinor << endl;
         int_1e.resize(size_gtou_spinor, size_gtou_spinor);
         int_1e = MatrixXd::Zero(size_gtou_spinor,size_gtou_spinor);
     }
@@ -46,7 +45,7 @@ MatrixXd GTO_SPINOR::get_h1e(const string& intType, const bool& uncontracted_) c
     {
         int ll = shell_list(ishell).l;
         int size_gtos = shell_list(ishell).coeff.rows();
-        for(int twojj = 2*ll+1; twojj >= 2*ll-1 && twojj > 0; twojj = twojj - 2)
+        for(int twojj = abs(2*ll-1); twojj <= 2*ll+1; twojj = twojj + 2)
         {
             double kappa = (twojj + 1.0) * (ll - twojj/2.0);
             MatrixXd h1e_single_shell(size_gtos, size_gtos);
@@ -193,16 +192,16 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
             angular.resize(Lmax+1);         
             
             int int_tmp2_i = 0;
-            for(int twojj_i = 2*l_i+1; twojj_i >= 2*l_i-1 && twojj_i > 0; twojj_i = twojj_i - 2)
+            for(int twojj_i = abs(2*l_i-1); twojj_i <= 2*l_i+1; twojj_i = twojj_i + 2)
             {
             int int_tmp2_j = 0;
-            for(int twojj_j = 2*l_j+1; twojj_j >= 2*l_j-1 && twojj_j > 0; twojj_j = twojj_j - 2)
+            for(int twojj_j = abs(2*l_j-1); twojj_j <= 2*l_j+1; twojj_j = twojj_j + 2)
             {
             int int_tmp2_k = 0;
-            for(int twojj_k = 2*l_k+1; twojj_k >= 2*l_k-1 && twojj_k > 0; twojj_k = twojj_k - 2)
+            for(int twojj_k = abs(2*l_k-1); twojj_k <= 2*l_k+1; twojj_k = twojj_k + 2)
             {
             int int_tmp2_l = 0;
-            for(int twojj_l = 2*l_l+1; twojj_l >= 2*l_l-1 && twojj_l > 0; twojj_l = twojj_l - 2)
+            for(int twojj_l = abs(2*l_l-1); twojj_l <= 2*l_l+1; twojj_l = twojj_l + 2)
             {
                 int sym_ai = twojj_i - 2*l_i, sym_aj = twojj_j - 2*l_j, sym_ak = twojj_k - 2*l_k, sym_al = twojj_l - 2*l_l;
                 double k_i = -(twojj_i+1.0)*sym_ai/2.0, k_j = -(twojj_j+1.0)*sym_aj/2.0, k_k = -(twojj_k+1.0)*sym_ak/2.0, k_l = -(twojj_l+1.0)*sym_al/2.0;
@@ -296,16 +295,16 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
             angular.resize(Lmax+1);       
             
             int int_tmp2_i = 0;
-            for(int twojj_i = 2*l_i+1; twojj_i >= 2*l_i-1 && twojj_i > 0; twojj_i = twojj_i - 2)
+            for(int twojj_i = abs(2*l_i-1); twojj_i <= 2*l_i+1; twojj_i = twojj_i + 2)
             {
             int int_tmp2_j = 0;
-            for(int twojj_j = 2*l_j+1; twojj_j >= 2*l_j-1 && twojj_j > 0; twojj_j = twojj_j - 2)
+            for(int twojj_j = abs(2*l_j-1); twojj_j <= 2*l_j+1; twojj_j = twojj_j + 2)
             {
             int int_tmp2_k = 0;
-            for(int twojj_k = 2*l_k+1; twojj_k >= 2*l_k-1 && twojj_k > 0; twojj_k = twojj_k - 2)
+            for(int twojj_k = abs(2*l_k-1); twojj_k <= 2*l_k+1; twojj_k = twojj_k + 2)
             {
             int int_tmp2_l = 0;
-            for(int twojj_l = 2*l_l+1; twojj_l >= 2*l_l-1 && twojj_l > 0; twojj_l = twojj_l - 2)
+            for(int twojj_l = abs(2*l_l-1); twojj_l <= 2*l_l+1; twojj_l = twojj_l + 2)
             {
                 int sym_ai = twojj_i - 2*l_i, sym_aj = twojj_j - 2*l_j, sym_ak = twojj_k - 2*l_k, sym_al = twojj_l - 2*l_l;
                 double k_i = -(twojj_i+1.0)*sym_ai/2.0, k_j = -(twojj_j+1.0)*sym_aj/2.0, k_k = -(twojj_k+1.0)*sym_ak/2.0, k_l = -(twojj_l+1.0)*sym_al/2.0;
@@ -383,12 +382,12 @@ double GTO_SPINOR::int2e_get_radial_LLLL(const int& l1, const double& k1, const 
 double GTO_SPINOR::int2e_get_radial_SSLL(const int& l1, const double& k1, const double& a1, const int& l2, const double& k2, const double& a2, const int& l3, const double& k3, const double& a3, const int& l4, const double& k4, const double& a4, const int& LL) const
 {
     double lk1 = 1+l1+k1, lk2 = 1+l2+k2;
-    double value = 4*a1*a2 * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3,a3,l4,a4,LL);
+    double value = 4.0*a1*a2 * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3,a3,l4,a4,LL);
     if(l1 != 0 && l2 != 0)
         value += lk1*lk2 * GTO::int2e_get_radial(l1-1,a1,l2-1,a2,l3,a3,l4,a4,LL)
-                - (2*a1*lk2+2*a2*lk1) * GTO::int2e_get_radial(l1,a1,l2,a2,l3,a3,l4,a4,LL);
+                - (2.0*a1*lk2+2.0*a2*lk1) * GTO::int2e_get_radial(l1,a1,l2,a2,l3,a3,l4,a4,LL);
     else if(l1 != 0 || l2 != 0)
-        value += - (2*a1*lk2+2*a2*lk1) * GTO::int2e_get_radial(l1,a1,l2,a2,l3,a3,l4,a4,LL);
+        value += - (2.0*a1*lk2+2.0*a2*lk1) * GTO::int2e_get_radial(l1,a1,l2,a2,l3,a3,l4,a4,LL);
     return value;
 }
 double GTO_SPINOR::int2e_get_radial_SSSS(const int& l1, const double& k1, const double& a1, const int& l2, const double& k2, const double& a2, const int& l3, const double& k3, const double& a3, const int& l4, const double& k4, const double& a4, const int& LL) const
@@ -412,6 +411,9 @@ double GTO_SPINOR::int2e_get_radial_SSSS(const int& l1, const double& k1, const 
                 - 4*a1*a2*(2*a3*lk4+2*a4*lk3) * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3,a3,l4,a4,LL)
                 + lk1*lk2*4*a3*a4 * GTO::int2e_get_radial(l1-1,a1,l2-1,a2,l3+1,a3,l4+1,a4,LL)
                 - (2*a1*lk2+2*a2*lk1)*4*a3*a4 * GTO::int2e_get_radial(l1,a1,l2,a2,l3+1,a3,l4+1,a4,LL);
+        else
+            value += lk1*lk2*4*a3*a4 * GTO::int2e_get_radial(l1-1,a1,l2-1,a2,l3+1,a3,l4+1,a4,LL)
+                - (2*a1*lk2+2*a2*lk1)*4*a3*a4 * GTO::int2e_get_radial(l1,a1,l2,a2,l3+1,a3,l4+1,a4,LL);
     }
     else if(l1 != 0 || l2 != 0)
     {
@@ -425,7 +427,20 @@ double GTO_SPINOR::int2e_get_radial_SSSS(const int& l1, const double& k1, const 
             value += (2*a1*lk2+2*a2*lk1)*(2*a3*lk4+2*a4*lk3) * GTO::int2e_get_radial(l1,a1,l2,a2,l3,a3,l4,a4,LL)
                 - 4*a1*a2*(2*a3*lk4+2*a4*lk3) * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3,a3,l4,a4,LL)
                 - (2*a1*lk2+2*a2*lk1)*4*a3*a4 * GTO::int2e_get_radial(l1,a1,l2,a2,l3+1,a3,l4+1,a4,LL);
+        else
+            value += - (2*a1*lk2+2*a2*lk1)*4*a3*a4 * GTO::int2e_get_radial(l1,a1,l2,a2,l3+1,a3,l4+1,a4,LL);
     }
+    else
+    {
+        if(l3 != 0 && l4 != 0)
+            value += 4*a1*a2*lk3*lk4 * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3-1,a3,l4-1,a4,LL)
+                - 4*a1*a2*(2*a3*lk4+2*a4*lk3) * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3,a3,l4,a4,LL);
+        else if(l3 != 0 || l4 != 0)
+            value +=- 4*a1*a2*(2*a3*lk4+2*a4*lk3) * GTO::int2e_get_radial(l1+1,a1,l2+1,a2,l3,a3,l4,a4,LL);
+        else
+            value += 0.0;
+    }
+    
     
     return value;
 }
