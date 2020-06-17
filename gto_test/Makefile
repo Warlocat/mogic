@@ -6,10 +6,10 @@ MAIN = main.o gto.o scf.o x2c.o gto_spinor.o
 TEST = test.o gto.o scf.o x2c.o gto_spinor.o
 
 main.exe: ${MAIN}
-	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} ${MAIN} -l gsl -o main.exe
+	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} -L ${GSL}/.libs ${MAIN} -l gsl -o main.exe
 
 test.exe: ${TEST}
-	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} ${TEST} -l gsl -o test.exe
+	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} -L ${GSL}/.libs ${TEST} -l gsl -o test.exe
 
 
 %.o: %.cpp

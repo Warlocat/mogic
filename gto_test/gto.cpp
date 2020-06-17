@@ -503,7 +503,7 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
         int_2e = MatrixXd::Zero(size_gtou*(size_gtou+1)/2, size_gtou*(size_gtou+1)/2);
     }
     
-    VectorXd angular, radial_tilde;
+    VectorXd radial_tilde;
     if(!uncontracted_)
     {
         int int_tmp_i = 0;
@@ -527,17 +527,27 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
             int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
 
+            radial_tilde.resize(Lmax+1);
+            VectorXd array_angular[2*l_i + 1][2*l_j + 1][2*l_k + 1][2*l_l + 1];
+            for(int mi = 0; mi < 2*l_i + 1; mi++)
+            for(int mj = 0; mj < 2*l_j + 1; mj++)
+            for(int mk = 0; mk < 2*l_k + 1; mk++)
+            for(int ml = 0; ml < 2*l_l + 1; ml++)
+            {
+                array_angular[mi][mj][mk][ml].resize(Lmax+1);
+                array_angular[mi][mj][mk][ml] = VectorXd::Zero(Lmax+1);
+                for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                    array_angular[mi][mj][mk][ml](tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
+            }
+
             for(int ii = 0; ii < size_subshell_i; ii++)
             for(int jj = 0; jj < size_subshell_j; jj++)
             for(int kk = 0; kk < size_subshell_k; kk++)
             for(int ll = 0; ll < size_subshell_l; ll++)
             {
-                radial_tilde.resize(Lmax+1);
-                angular.resize(Lmax+1);
                 for(int iii = 0; iii < Lmax+1; iii++)
                 {
                     radial_tilde(iii) = 0.0;
-                    angular(iii) = 0.0;
                 }
 
                 for(int iii = 0; iii < size_gtos_i; iii++)
@@ -557,11 +567,8 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
                 {
                     int ei = int_tmp_i + mi + ii * (2*l_i + 1), ej = int_tmp_j + mj + jj * (2*l_j + 1), ek = int_tmp_k + mk + kk * (2*l_k + 1), el = int_tmp_l + ml + ll * (2*l_l + 1);
                     if(ei < ej || ek < el) continue;
-                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                        angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
-                    
                     int eij = ei*(ei+1)/2+ej, ekl = ek*(ek+1)/2+el;
-                    int_2e(eij,ekl) = radial_tilde.transpose() * angular;
+                    int_2e(eij,ekl) = radial_tilde.transpose() * array_angular[mi][mj][mk][ml];
                 }    
             }
             int_tmp_l += shell_list(lshell).coeff.cols() * (2*shell_list(lshell).l+1);
@@ -596,7 +603,17 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
 
             radial_tilde.resize(Lmax+1);
-            angular.resize(Lmax+1);
+            VectorXd array_angular[2*l_i + 1][2*l_j + 1][2*l_k + 1][2*l_l + 1];
+            for(int mi = 0; mi < 2*l_i + 1; mi++)
+            for(int mj = 0; mj < 2*l_j + 1; mj++)
+            for(int mk = 0; mk < 2*l_k + 1; mk++)
+            for(int ml = 0; ml < 2*l_l + 1; ml++)
+            {
+                array_angular[mi][mj][mk][ml].resize(Lmax+1);
+                array_angular[mi][mj][mk][ml] = VectorXd::Zero(Lmax+1);
+                for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                    array_angular[mi][mj][mk][ml](tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
+            }
             for(int ii = 0; ii < size_gtos_i; ii++)
             for(int jj = 0; jj < size_gtos_j; jj++)
             for(int kk = 0; kk < size_gtos_k; kk++)
@@ -610,7 +627,6 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
                 for(int iii = 0; iii < Lmax+1; iii++)
                 {
                     radial_tilde(iii) = 0.0;
-                    angular(iii) = 0.0;
                 }
                 for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
                         radial_tilde(tmp) = int2e_get_radial(l_i, shell_list(ishell).exp_a(ii), l_j, shell_list(jshell).exp_a(jj), l_k, shell_list(kshell).exp_a(kk), l_l, shell_list(lshell).exp_a(ll), tmp) / norm;
@@ -621,12 +637,9 @@ MatrixXd GTO::get_h2e(const bool& uncontracted_) const
                 for(int ml = 0; ml < 2*l_l + 1; ml++)
                 {
                     int ei = int_tmp_i + mi + ii * (2*l_i + 1), ej = int_tmp_j + mj + jj * (2*l_j + 1), ek = int_tmp_k + mk + kk * (2*l_k + 1), el = int_tmp_l + ml + ll * (2*l_l + 1);
-                    if(ei < ej || ek < el) continue;
-                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                        angular(tmp) = int2e_get_angular(l_i, mi - l_i, l_j, mj - l_j, l_k, mk - l_k, l_l, ml - l_l, tmp);
-                    
+                    if(ei < ej || ek < el) continue;                  
                     int eij = ei*(ei+1)/2+ej, ekl = ek*(ek+1)/2+el;
-                    int_2e(eij,ekl) = radial_tilde.transpose() * angular;
+                    int_2e(eij,ekl) = radial_tilde.transpose() * array_angular[mi][mj][mk][ml];
                 }    
             }
             int_tmp_l += shell_list(lshell).coeff.rows() * (2*shell_list(lshell).l+1);
