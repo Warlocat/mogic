@@ -145,7 +145,7 @@ MatrixXd GTO_SPINOR::get_h1e_spin_orbitals(const string& intType, const bool& un
 }
 
 /*
-    Evaluate different two-electron integrals in 2-spinor basis
+    Evaluate different two-electron integrals (Coulomb) in 2-spinor basis
 */
 MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracted_) const
 {
@@ -163,7 +163,7 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
     int_2e.resize(size_2e_2,size_2e_2);
     int_2e = MatrixXd::Zero(size_2e_2,size_2e_2);
     
-    VectorXd angular, radial_tilde;
+    VectorXd radial_tilde;
     int int_tmp_i, int_tmp_j, int_tmp_k, int_tmp_l;
     if(!uncontracted_)
     {
@@ -188,8 +188,7 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
             int size_subshell_i = shell_list(ishell).coeff.cols(), size_subshell_j = shell_list(jshell).coeff.cols(), size_subshell_k = shell_list(kshell).coeff.cols(), size_subshell_l = shell_list(lshell).coeff.cols();
 
-            radial_tilde.resize(Lmax+1);    
-            angular.resize(Lmax+1);         
+            radial_tilde.resize(Lmax+1);       
             
             int int_tmp2_i = 0;
             for(int twojj_i = abs(2*l_i-1); twojj_i <= 2*l_i+1; twojj_i = twojj_i + 2)
@@ -205,13 +204,25 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
             {
                 int sym_ai = twojj_i - 2*l_i, sym_aj = twojj_j - 2*l_j, sym_ak = twojj_k - 2*l_k, sym_al = twojj_l - 2*l_l;
                 double k_i = -(twojj_i+1.0)*sym_ai/2.0, k_j = -(twojj_j+1.0)*sym_aj/2.0, k_k = -(twojj_k+1.0)*sym_ak/2.0, k_l = -(twojj_l+1.0)*sym_al/2.0;
+                VectorXd array_angular[twojj_i + 1][twojj_j + 1][twojj_k + 1][twojj_l + 1];
+
+                for(int mi = 0; mi < twojj_i + 1; mi++)
+                for(int mj = 0; mj < twojj_j + 1; mj++)
+                for(int mk = 0; mk < twojj_k + 1; mk++)
+                for(int ml = 0; ml < twojj_l + 1; ml++)
+                {
+                    array_angular[mi][mj][mk][ml].resize(Lmax+1);
+                    array_angular[mi][mj][mk][ml] = VectorXd::Zero(Lmax+1);
+                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                        array_angular[mi][mj][mk][ml](tmp) = int2e_get_angular(l_i, 2*mi-twojj_i, sym_ai, l_j, 2*mj-twojj_j, sym_aj, l_k, 2*mk-twojj_k, sym_ak, l_l, 2*ml-twojj_l, sym_al, tmp);
+                }
+
                 for(int ii = 0; ii < size_subshell_i; ii++)
                 for(int jj = 0; jj < size_subshell_j; jj++)
                 for(int kk = 0; kk < size_subshell_k; kk++)
                 for(int ll = 0; ll < size_subshell_l; ll++)
                 {
                     radial_tilde = VectorXd::Zero(Lmax+1);
-                    angular = VectorXd::Zero(Lmax+1);
                     for(int iii = 0; iii < size_gtos_i; iii++)
                     for(int jjj = 0; jjj < size_gtos_j; jjj++)
                     for(int kkk = 0; kkk < size_gtos_k; kkk++)
@@ -246,10 +257,8 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
                     for(int ml = 0; ml < twojj_l + 1; ml++)
                     {
                         int ei = int_tmp_i + int_tmp2_i + mi + ii * (twojj_i+1), ej = int_tmp_j + int_tmp2_j + mj + jj * (twojj_j+1), ek = int_tmp_k + int_tmp2_k + mk + kk * (twojj_k+1), el = int_tmp_l + int_tmp2_l + ml + ll * (twojj_l+1);
-                        for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                            angular(tmp) = int2e_get_angular(l_i, 2*mi-twojj_i, sym_ai, l_j, 2*mj-twojj_j, sym_aj, l_k, 2*mk-twojj_k, sym_ak, l_l, 2*ml-twojj_l, sym_al, tmp);
                         int eij = ei*size_2e+ej, ekl = ek*size_2e+el;
-                        int_2e(eij,ekl) = radial_tilde.transpose() * angular;
+                        int_2e(eij,ekl) = radial_tilde.transpose() * array_angular[mi][mj][mk][ml];
                     }
                 }
                 int_tmp2_l += shell_list(lshell).coeff.cols() * (twojj_l+1);
@@ -291,8 +300,7 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
             }
             int size_gtos_i = shell_list(ishell).coeff.rows(), size_gtos_j = shell_list(jshell).coeff.rows(), size_gtos_k = shell_list(kshell).coeff.rows(), size_gtos_l = shell_list(lshell).coeff.rows();
             
-            radial_tilde.resize(Lmax+1);    
-            angular.resize(Lmax+1);       
+            radial_tilde.resize(Lmax+1);     
             
             int int_tmp2_i = 0;
             for(int twojj_i = abs(2*l_i-1); twojj_i <= 2*l_i+1; twojj_i = twojj_i + 2)
@@ -308,13 +316,25 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
             {
                 int sym_ai = twojj_i - 2*l_i, sym_aj = twojj_j - 2*l_j, sym_ak = twojj_k - 2*l_k, sym_al = twojj_l - 2*l_l;
                 double k_i = -(twojj_i+1.0)*sym_ai/2.0, k_j = -(twojj_j+1.0)*sym_aj/2.0, k_k = -(twojj_k+1.0)*sym_ak/2.0, k_l = -(twojj_l+1.0)*sym_al/2.0;
+                VectorXd array_angular[twojj_i + 1][twojj_j + 1][twojj_k + 1][twojj_l + 1];
+
+                for(int mi = 0; mi < twojj_i + 1; mi++)
+                for(int mj = 0; mj < twojj_j + 1; mj++)
+                for(int mk = 0; mk < twojj_k + 1; mk++)
+                for(int ml = 0; ml < twojj_l + 1; ml++)
+                {
+                    array_angular[mi][mj][mk][ml].resize(Lmax+1);
+                    array_angular[mi][mj][mk][ml] = VectorXd::Zero(Lmax+1);
+                    for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
+                        array_angular[mi][mj][mk][ml](tmp) = int2e_get_angular(l_i, 2*mi-twojj_i, sym_ai, l_j, 2*mj-twojj_j, sym_aj, l_k, 2*mk-twojj_k, sym_ak, l_l, 2*ml-twojj_l, sym_al, tmp);
+                }
+
                 for(int ii = 0; ii < size_gtos_i; ii++)
                 for(int jj = 0; jj < size_gtos_j; jj++)
                 for(int kk = 0; kk < size_gtos_k; kk++)
                 for(int ll = 0; ll < size_gtos_l; ll++)
                 {
                     radial_tilde = VectorXd::Zero(Lmax+1);
-                    angular = VectorXd::Zero(Lmax+1);
                     double norm = shell_list(ishell).norm(ii) * shell_list(jshell).norm(jj) * shell_list(kshell).norm(kk) * shell_list(lshell).norm(ll);
                     /*
                         radial_tilde in uncontracted case is the radial tensor
@@ -343,10 +363,8 @@ MatrixXd GTO_SPINOR::get_h2e(const string& integralTYPE, const bool& uncontracte
                     for(int ml = 0; ml < twojj_l + 1; ml++)
                     {
                         int ei = int_tmp_i + int_tmp2_i + mi + ii * (twojj_i+1), ej = int_tmp_j + int_tmp2_j + mj + jj * (twojj_j+1), ek = int_tmp_k + int_tmp2_k + mk + kk * (twojj_k+1), el = int_tmp_l + int_tmp2_l + ml + ll * (twojj_l+1);
-                        for(int tmp = Lmax; tmp >= 0; tmp = tmp - 2)
-                            angular(tmp) = int2e_get_angular(l_i, 2*mi-twojj_i, sym_ai, l_j, 2*mj-twojj_j, sym_aj, l_k, 2*mk-twojj_k, sym_ak, l_l, 2*ml-twojj_l, sym_al, tmp);
                         int eij = ei*size_2e+ej, ekl = ek*size_2e+el;
-                        int_2e(eij,ekl) = radial_tilde.transpose() * angular;
+                        int_2e(eij,ekl) = radial_tilde.transpose() * array_angular[mi][mj][mk][ml];
                     }
                 }
                 int_tmp2_l += shell_list(lshell).coeff.rows() * (twojj_l+1);
