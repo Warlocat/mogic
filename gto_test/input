@@ -1,7 +1,0 @@
-CU           atomName
-PVDZ        basisSet
-0           charge
-2           spin_2S+1
-SCF         jobs
-SFX2C1E     rel
-0           unc
