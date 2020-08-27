@@ -21,6 +21,7 @@ int main()
     cout << ene_mp2 << "\t" << rhf_test.ene_scf + ene_mp2 << endl;
     VectorXd h2e_mo_so = integralTransfermation_spatial2spin(h2e_mo, size_basis);
     CCSD ccsd_test(nelec_a+nelec_b, size_basis*2-nelec_a-nelec_b, h2e_mo_so, rhf_test.ene_orb);
+    ccsd_test.runCCSD();
 
     cout << "Congratulation! This program finished successfully!"  << endl;
     return 0;
