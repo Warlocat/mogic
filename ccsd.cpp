@@ -102,9 +102,9 @@ void CCSD::memoryAllocation()
         W_ovvo[mm] = new double**[n_vir];
         for(int bb = 0; bb < n_vir; bb++)
         {
-            W_oooo[mm][bb] = new double*[n_vir];
+            W_ovvo[mm][bb] = new double*[n_vir];
             for(int ee = 0; ee < n_vir; ee++)
-                W_oooo[mm][bb][ee] = new double[n_occ];
+                W_ovvo[mm][bb][ee] = new double[n_occ];
         }
     }
 
@@ -137,7 +137,6 @@ void CCSD::memoryDeallocation()
     }
     delete[] tau;
     delete[] tau_tilde;
-
     for(int mm = 0; mm < n_occ; mm++)
     {
         for(int nn = 0; nn < n_occ; nn++)
@@ -165,8 +164,8 @@ void CCSD::memoryDeallocation()
         for(int bb = 0; bb < n_vir; bb++)
         {
             for(int ee = 0; ee < n_vir; ee++)
-                delete[] W_oooo[mm][bb][ee];
-            delete[] W_oooo[mm][bb];
+                delete[] W_ovvo[mm][bb][ee];
+            delete[] W_ovvo[mm][bb];
         }
         delete[] W_ovvo[mm];
     }
@@ -206,7 +205,6 @@ void CCSD::evaluate_W_F()
     for(int ii = 0; ii < n_occ; ii++)
     for(int jj = 0; jj < n_occ; jj++)
     {
-        cout  << mm << nn << ii << jj << endl;
         W_oooo[mm][nn][ii][jj] = h2e_dirac_so(mm,nn,ii,jj);
         for(int ee = 0; ee < n_vir; ee++)        
         {
@@ -217,9 +215,7 @@ void CCSD::evaluate_W_F()
                 W_oooo[mm][nn][ii][jj] += 0.25*tau[ii][jj][ee][ff]*h2e_dirac_so(mm,nn,ee+n_occ,ff+n_occ);
             }
         }
-        cout  << jj << endl;
     }
-cout << 11111;
     for(int aa = 0; aa < n_vir; aa++)
     for(int bb = 0; bb < n_vir; bb++)
     for(int ee = 0; ee < n_vir; ee++)
@@ -234,11 +230,10 @@ cout << 11111;
                 W_vvvv[aa][bb][ee][ff] += 0.25*tau[mm][nn][aa][bb]*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
         }
     }
-cout << "Wvvvv";
     for(int mm = 0; mm < n_occ; mm++)
     for(int bb = 0; bb < n_vir; bb++)
     for(int ee = 0; ee < n_vir; ee++)
-    for(int jj = 0; ee < n_occ; jj++)
+    for(int jj = 0; jj < n_occ; jj++)
     {
         W_ovvo[mm][bb][ee][jj] = h2e_dirac_so(mm,n_occ+bb,n_occ+ee,jj);
         for(int ff = 0; ff < n_vir; ff++)
@@ -252,7 +247,6 @@ cout << "Wvvvv";
                 W_ovvo[mm][bb][ee][jj] -= (0.5*t2(jj*n_occ+nn,ff*n_vir+bb) + t1(jj,ff)*t1(nn,bb)) * h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
         }
     }
-cout << "Wovvo";
 
     for(int aa = 0; aa < n_vir; aa++)
     for(int ee = 0; ee < n_vir; ee++)
@@ -266,7 +260,6 @@ cout << "Wovvo";
                 F_vv[aa][ee] -= 0.5*tau_tilde[mm][nn][aa][ff]*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
         }
     }
-    cout << "Fvv";
     for(int mm = 0; mm < n_occ; mm++)
     for(int ii = 0; ii < n_occ; ii++)
     {
@@ -279,7 +272,6 @@ cout << "Wovvo";
                 F_oo[mm][ii] += 0.5*tau_tilde[ii][nn][ee][ff]*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
         }
     }
-    cout << "Foo";
     for(int mm = 0; mm < n_occ; mm++)
     for(int ee = 0; ee < n_vir; ee++)
     {
@@ -290,7 +282,6 @@ cout << "Wovvo";
             F_ov[mm][ee] += t1(nn,ff)*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
         } 
     }
-    cout << "Fov";
 }
 
 void CCSD::evaluate_t1t2New()
@@ -334,7 +325,14 @@ void CCSD::evaluate_t1t2New()
                 {
                     t2_new(ii*n_occ+jj,aa*n_vir+bb) -= 0.5*t2(ii*n_occ+jj,aa*n_vir+ee)*t1(mm,bb)*F_ov[mm][ee];
                     t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*t2(ii*n_occ+jj,bb*n_vir+ee)*t1(mm,aa)*F_ov[mm][ee];
+
+                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += (t2(ii*n_occ+mm,aa*n_vir+ee)*W_ovvo[mm][bb][ee][jj] - t1(ii,ee)*t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ee+n_occ,jj));
+                    t2_new(ii*n_occ+jj,aa*n_vir+bb) -= (t2(ii*n_occ+mm,bb*n_vir+ee)*W_ovvo[mm][aa][ee][jj] - t1(ii,ee)*t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ee+n_occ,jj));
+                    t2_new(ii*n_occ+jj,aa*n_vir+bb) -= (t2(jj*n_occ+mm,aa*n_vir+ee)*W_ovvo[mm][bb][ee][ii] - t1(jj,ee)*t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ee+n_occ,ii));
+                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += (t2(jj*n_occ+mm,bb*n_vir+ee)*W_ovvo[mm][aa][ee][ii] - t1(jj,ee)*t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ee+n_occ,ii));
                 }
+                for(int ff = 0; ff < n_vir; ff++)
+                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*tau[ii][jj][ee][ff]*W_vvvv[aa][bb][ee][ff];
             }
             for(int mm = 0; mm < n_occ; mm++)
             {
@@ -347,21 +345,9 @@ void CCSD::evaluate_t1t2New()
                     t2_new(ii*n_occ+jj,aa*n_vir+bb) -= 0.5 * t2(ii*n_occ+mm,aa*n_vir+bb)*t1(jj,ee)*F_ov[mm][ee];
                     t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5 * t2(jj*n_occ+mm,aa*n_vir+bb)*t1(ii,ee)*F_ov[mm][ee];
                 }
-            }
-            for(int mm = 0; mm < n_occ; mm++)
-            for(int nn = 0; nn < n_occ; nn++)
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*tau[mm][nn][aa][bb]*W_oooo[mm][nn][ii][jj];
-            for(int ee = 0; ee < n_vir; ee++)
-            for(int ff = 0; ff < n_vir; ff++)
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*tau[ii][jj][ee][ff]*W_vvvv[aa][bb][ee][ff];
-            for(int mm = 0; mm < n_occ; mm++)
-            for(int ee = 0; ee < n_vir; ee++)
-            {
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += (t2(ii*n_occ+mm,aa*n_occ+ee)*W_ovvo[mm][bb][ee][jj] - t1(ii,ee)*t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ee+n_occ,jj));
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) -= (t2(ii*n_occ+mm,bb*n_occ+ee)*W_ovvo[mm][aa][ee][jj] - t1(ii,ee)*t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ee+n_occ,jj));
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) -= (t2(jj*n_occ+mm,aa*n_occ+ee)*W_ovvo[mm][bb][ee][ii] - t1(jj,ee)*t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ee+n_occ,ii));
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += (t2(jj*n_occ+mm,bb*n_occ+ee)*W_ovvo[mm][aa][ee][ii] - t1(jj,ee)*t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ee+n_occ,ii));
-            }
+                for(int nn = 0; nn < n_occ; nn++)
+                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*tau[mm][nn][aa][bb]*W_oooo[mm][nn][ii][jj];
+            }                        
             t2_new(ii*n_occ+jj,aa*n_vir+bb) = t2_new(ii*n_occ+jj,aa*n_vir+bb) / D2(ii*n_occ+jj,aa*n_vir+bb);
         }
     }
@@ -385,7 +371,9 @@ double CCSD::evaluate_ene_ccsd()
     for(int jj = 0; jj < n_occ; jj++)
     for(int aa = 0; aa < n_vir; aa++)
     for(int bb = 0; bb < n_vir; bb++)
-        ene += h2e_dirac_so(ii,jj,aa+n_occ,bb+n_occ)*(0.25*t2(ii*n_occ+jj,aa*n_occ+bb) + 0.5*t1(ii,aa)*t1(jj,bb));
+    {
+        ene += h2e_dirac_so(ii,jj,aa+n_occ,bb+n_occ)*(0.25*t2(ii*n_occ+jj,aa*n_vir+bb) + 0.5*t1(ii,aa)*t1(jj,bb));
+    }
 
     return ene;
 }
@@ -398,13 +386,9 @@ void CCSD::runCCSD()
     while(max(d_t1,d_t2) >= convControl)
     {
         iteration++;
-        cout << 0 << endl;
         evaluate_tau();
-        cout << 1 << endl;
         evaluate_W_F();
-        cout << 2 << endl;
         evaluate_t1t2New();
-        cout << 3 << endl;
         ene_new = evaluate_ene_ccsd();
         d_t1 = evaluateChange(t1,t1_new);
         d_t2 = evaluateChange(t2,t2_new);
@@ -419,4 +403,56 @@ void CCSD::runCCSD()
     cout << endl << "CCSD converges after " << iteration << " iterations." << endl;
     cout << "Final CCSD energy is " << setprecision(16) << ene_ccsd << " hartree." << endl;
     memoryDeallocation();
+
+    return;
+}
+
+void CCSD::runCCSD_pT()
+{
+    runCCSD();
+    double mem = pow(n_occ,3)*pow(n_vir,3) * 5 *sizeof(double) / 1024.0 / 1024.0;
+    cout << "CCSD(T) calculation is called. It requires " << mem << " MB memory." << endl;
+    double D3[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
+    double tmp_c[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir], tmp_d[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
+    double D3t3c[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir], D3t3d[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
+    cout << 2 << endl;
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int jj = 0; jj < n_occ; jj++)
+    for(int kk = 0; kk < n_occ; kk++)
+    for(int aa = 0; aa < n_vir; aa++)
+    for(int bb = 0; bb < n_vir; bb++)
+    for(int cc = 0; cc < n_vir; cc++)
+    {
+        D3[ii][jj][kk][aa][bb][cc] = ene_mo_so(ii) + ene_mo_so(jj) + ene_mo_so(kk)
+                                    - ene_mo_so(aa + n_occ) - ene_mo_so(bb + n_occ) - ene_mo_so(cc + n_occ);
+        tmp_d[ii][jj][kk][aa][bb][cc] = t1(ii,aa) * h2e_dirac_so(jj,kk,bb+n_occ,cc+n_occ);
+        tmp_c[ii][jj][kk][aa][bb][cc] = 0.0;
+        for(int ee = 0; ee < n_vir; ee++)
+            tmp_c[ii][jj][kk][aa][bb][cc] += t2(jj*n_occ+kk,aa*n_vir+ee) * h2e_dirac_so(ee+n_occ,ii,bb+n_occ,cc+n_occ);
+        for(int mm = 0; mm < n_occ; mm++)
+            tmp_c[ii][jj][kk][aa][bb][cc] -= t2(ii*n_occ+mm,bb*n_vir+cc) * h2e_dirac_so(mm,aa+n_occ,jj,kk);
+    }
+cout << 3 << endl;
+    double ene_pT = 0.0;
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int jj = 0; jj < n_occ; jj++)
+    for(int kk = 0; kk < n_occ; kk++)
+    for(int aa = 0; aa < n_vir; aa++)
+    for(int bb = 0; bb < n_vir; bb++)
+    for(int cc = 0; cc < n_vir; cc++)
+    {
+        D3t3c[ii][jj][kk][aa][bb][cc] = tmp_c[ii][jj][kk][aa][bb][cc] - tmp_c[ii][jj][kk][bb][aa][cc] - tmp_c[ii][jj][kk][cc][bb][aa]
+                                    - tmp_c[jj][ii][kk][aa][bb][cc] - tmp_c[kk][jj][ii][aa][bb][cc] + tmp_c[jj][ii][kk][bb][aa][cc]
+                                    + tmp_c[jj][ii][kk][cc][bb][aa] + tmp_c[kk][jj][ii][bb][aa][cc] + tmp_c[kk][jj][ii][cc][bb][aa];
+        D3t3d[ii][jj][kk][aa][bb][cc] = tmp_d[ii][jj][kk][aa][bb][cc] - tmp_d[ii][jj][kk][bb][aa][cc] - tmp_d[ii][jj][kk][cc][bb][aa]
+                                    - tmp_d[jj][ii][kk][aa][bb][cc] - tmp_d[kk][jj][ii][aa][bb][cc] + tmp_d[jj][ii][kk][bb][aa][cc]
+                                    + tmp_d[jj][ii][kk][cc][bb][aa] + tmp_d[kk][jj][ii][bb][aa][cc] + tmp_d[kk][jj][ii][cc][bb][aa];
+        ene_pT += 1.0/36.0 * D3t3c[ii][jj][kk][aa][bb][cc] * (D3t3c[ii][jj][kk][aa][bb][cc] + D3t3d[ii][jj][kk][aa][bb][cc]) / D3[ii][jj][kk][aa][bb][cc];
+    }
+
+    ene_ccsd = ene_ccsd + ene_pT;
+    cout << "E((T)) = " << ene_pT << " hartree." << endl;
+    cout << "Final E(CCSD(T)) = " << ene_ccsd << " hartree." << endl; 
+
+    return;
 }

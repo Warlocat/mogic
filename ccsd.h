@@ -28,12 +28,13 @@ protected:
 public:
     bool converged = false;
     int maxIter = 200;
-    double ene_ccsd, convControl = 1e-7;
+    double ene_ccsd, convControl = 1e-10;
 
     CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_mo_so_, const VectorXd& ene_mo_);
     virtual ~CCSD();
 
     void runCCSD();
+    void runCCSD_pT();
 };
 
 #endif

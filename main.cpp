@@ -13,6 +13,7 @@ double get_energy_MP2(const VectorXd& h2e_mo, const VectorXd& ene_mo, const int&
 
 int main()
 {
+    double ene_total;
     int nelec_a = 5, nelec_b = 5, size_basis = 14;
     RHF rhf_test(nelec_a, nelec_b, size_basis);
     rhf_test.runSCF();
@@ -21,8 +22,10 @@ int main()
     cout << ene_mp2 << "\t" << rhf_test.ene_scf + ene_mp2 << endl;
     VectorXd h2e_mo_so = integralTransfermation_spatial2spin(h2e_mo, size_basis);
     CCSD ccsd_test(nelec_a+nelec_b, size_basis*2-nelec_a-nelec_b, h2e_mo_so, rhf_test.ene_orb);
-    ccsd_test.runCCSD();
-
+    ccsd_test.runCCSD_pT();
+    
+    ene_total = rhf_test.ene_scf + ccsd_test.ene_ccsd;
+    cout << "Total energy :" << ene_total << " hartree." << endl;
     cout << "Congratulation! This program finished successfully!"  << endl;
     return 0;
 }
