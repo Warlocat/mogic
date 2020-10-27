@@ -52,7 +52,7 @@ inline double CCSD::h2e_dirac_so(const int& ii, const int& jj, const int& kk, co
 
 void CCSD::memoryAllocation()
 {
-    double size = (pow(n_occ,2)*pow(n_vir,2)*5 + pow(n_occ,4) + pow(n_vir,4) + pow(n_occ,2)*pow(n_vir,2) + n_vir*n_vir + n_occ*n_occ + n_vir*n_occ + n_occ*n_vir*3) * sizeof(double) / 1024;
+    double size = (pow(n_occ,2)*pow(n_vir,2)*5 + pow(n_occ,4) + pow(n_vir,4) + pow(n_occ,2)*pow(n_vir,2) + n_vir*n_vir + n_occ*n_occ + n_vir*n_occ + n_occ*n_vir*3) * sizeof(double) / 1024.0 / 1024.0;
 
     cout << "Memory requirement: " << size << " MB.\n";
 
@@ -415,7 +415,7 @@ void CCSD::runCCSD_pT()
     double D3[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
     double tmp_c[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir], tmp_d[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
     double D3t3c[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir], D3t3d[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
-    cout << 2 << endl;
+
     for(int ii = 0; ii < n_occ; ii++)
     for(int jj = 0; jj < n_occ; jj++)
     for(int kk = 0; kk < n_occ; kk++)
@@ -432,7 +432,7 @@ void CCSD::runCCSD_pT()
         for(int mm = 0; mm < n_occ; mm++)
             tmp_c[ii][jj][kk][aa][bb][cc] -= t2(ii*n_occ+mm,bb*n_vir+cc) * h2e_dirac_so(mm,aa+n_occ,jj,kk);
     }
-cout << 3 << endl;
+
     double ene_pT = 0.0;
     for(int ii = 0; ii < n_occ; ii++)
     for(int jj = 0; jj < n_occ; jj++)
