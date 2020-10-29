@@ -6,30 +6,33 @@
 using namespace std;
 using namespace Eigen;
 
-const double ATOMIC_MASS_UNIT = 1.660539040/9.1093826*10000, au2cm_1 = 219474.63, ang2bohr = 1.8897161646320724, PI = asin(1.0) * 2.0;
+const double ATOMIC_MASS_UNIT = 1.660539040/9.1093826*10000, au2cm_1 = 219474.63, ang2bohr = 1.8897161646320724;
 
 class MOL
 {
 private:
-    MatrixXd Coord_cart;
     /* Get mass for atomic number an */
     double massInit(const int& an);
     double innerP(const VectorXd& v1, const VectorXd& v2);
     Vector3d crossP(const Vector3d& v1, const Vector3d& v2);
 
 public:
-    MOL();
-    ~MOL();
-    int Natom;
-    string basis, subgroup = "C1", unit = "BOHR";
-    VectorXi atomicNumber;
+    int Natom, charge, nelec, nelec_a, nelec_b, spin;
+    string subgroup = "C1", unit = "BOHR";
+    VectorXi atomList;
+    Matrix<Vector3d,-1,1> coordCart;
+    Matrix<string,-1,1> basisSet;
     VectorXd mass;
 
+    MOL();
+    ~MOL();
+
     /* Input and Output */
+    void readInput(const string& filename);
     void readxyz(const string& filename);
     void writexyz(const string& filename);
     
-    /* transfer Coord_cart to center of mass coordinates */
+    /* transfer coordCart to center of mass coordinates */
     void cart2COM();
     
     /* Calculate bond length r_ij between i and j atom */

@@ -4,9 +4,11 @@
 #include<iomanip>
 #include<fstream>
 
-SCF::SCF(const MOL& mol_)
+SCF::SCF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_):
+nelec_a(mol_.nelec_a), nelec_b(mol_.nelec_b), size_basis(s_.rows()), overlap(s_), h1e(t_+v_), h2e(eri_), V_RR(V_RR_)
 {
-    cout << "Constructor with class MOL has not been implemented yet." << endl;
+    cout << "Special constructor of SCF class using MOL and integrals is called." << endl;
+    overlap_half_i = matrix_half_inverse(overlap);
 }
 SCF::SCF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_):
 nelec_a(nelec_a_), nelec_b(nelec_b_), size_basis(size_basis_)
@@ -97,7 +99,7 @@ MatrixXd SCF::matrix_half_inverse(const MatrixXd& inputM)
     {
         if(eigenvalues(ii) < 0)
         {
-            cout << "ERROR: Matrix has negative eigenvalues!" << endl;
+            cout << "ERROR: Overlap Matrixhas negative eigenvalues!" << endl;
             exit(99);
         }
         else
@@ -128,7 +130,7 @@ MatrixXd SCF::matrix_half(const MatrixXd& inputM)
     {
         if(eigenvalues(ii) < 0)
         {
-            cout << "ERROR: Matrix has negative eigenvalues!" << endl;
+            cout << "ERROR: Overlap Matrixhas negative eigenvalues!" << endl;
             exit(99);
         }
         else
@@ -206,8 +208,8 @@ SCF(nelec_a_, nelec_b_, size_basis_)
     }
 }
 
-RHF::RHF(const MOL& mol_):
-SCF(mol_)
+RHF::RHF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_):
+SCF(mol_, s_, t_, v_, eri_, V_RR_)
 {
 }
 
@@ -246,7 +248,7 @@ void RHF::runSCF()
         }
 
         eigensolverG(fock, overlap_half_i, ene_orb, coeff);
-        newDen = evaluateDensity(coeff, nelec_a);
+        newDen = 0.5*(evaluateDensity(coeff, nelec_a) + density);
         d_density = evaluateChange(density, newDen);
         cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
         
@@ -295,8 +297,8 @@ SCF(nelec_a_, nelec_b_, size_basis_)
     }
 }
 
-UHF::UHF(const MOL& mol_):
-SCF(mol_)
+UHF::UHF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_):
+SCF(mol_, s_, t_, v_, eri_, V_RR_)
 {
 }
 

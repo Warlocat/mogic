@@ -2,6 +2,7 @@
 #include<fstream>
 #include<omp.h>
 #include"mol.h"
+#include"molint.h"
 #include"scf.h"
 #include"ccsd.h"
 using namespace std;
@@ -13,20 +14,24 @@ double get_energy_MP2(const VectorXd& h2e_mo, const VectorXd& ene_mo, const int&
 
 int main()
 {
-    double ene_total;
-    int nelec_a = 5, nelec_b = 5, size_basis = 14;
-    RHF rhf_test(nelec_a, nelec_b, size_basis);
-    rhf_test.runSCF();
-    VectorXd h2e_mo = integralTransfermation(rhf_test.get_h2e_vector(), rhf_test.coeff, "smart");
-    double ene_mp2 = get_energy_MP2(h2e_mo, rhf_test.ene_orb, nelec_a, nelec_b);
-    cout << ene_mp2 << "\t" << rhf_test.ene_scf + ene_mp2 << endl;
-    VectorXd h2e_mo_so = integralTransfermation_spatial2spin(h2e_mo, size_basis);
-    CCSD ccsd_test(nelec_a+nelec_b, size_basis*2-nelec_a-nelec_b, h2e_mo_so, rhf_test.ene_orb);
-    ccsd_test.runCCSD_pT();
-    
-    ene_total = rhf_test.ene_scf + ccsd_test.ene_ccsd;
-    cout << "Total energy :" << ene_total << " hartree." << endl;
-    cout << "Congratulation! This program finished successfully!"  << endl;
+    MOL mol_test;
+    mol_test.readxyz("test.xyz");
+    mol_test.readInput("inputFile");
+    MOLINT molint_test(mol_test,false);
+
+    MatrixXd s = molint_test.get_h1e("kinetic");
+    for(int ii = 0; ii < s.rows(); ii++)
+    for(int jj = 0; jj <= ii ; jj++)
+    {
+        cout << s(ii,jj) << endl;
+    }
+    // MatrixXd eri = molint_test.get_h2e("eriLLLL");
+    // cout << eri << endl;
+
+    // RHF rhf_test(mol_test, molint_test.get_h1e("overlap"), molint_test.get_h1e("kinetic"), molint_test.get_h1e("nucV"), molint_test.get_h2e("eriLLLL"), molint_test.get_V_RR());
+    // rhf_test.runSCF();
+
+
     return 0;
 }
 

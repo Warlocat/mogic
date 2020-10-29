@@ -28,9 +28,9 @@ protected:
 public:
     bool converged = false;
     int maxIter = 200;
-    double ene_scf, convControl = 1e-10;
+    double ene_scf, convControl = 1e-8;
 
-    SCF(const MOL& mol_);
+    SCF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_);
     SCF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
     virtual ~SCF();
 
@@ -47,7 +47,7 @@ public:
     MatrixXd coeff;
     VectorXd ene_orb;
 
-    RHF(const MOL& mol_);
+    RHF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_);
     RHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
     virtual ~RHF();
     virtual void runSCF();
@@ -63,7 +63,7 @@ public:
     MatrixXd coeff_a, coeff_b;
     VectorXd ene_orb_a, ene_orb_b;
 
-    UHF(const MOL& mol_);
+    UHF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_);
     UHF(const int& nelec_a_, const int& nelec_b_, const int& size_basis_);
     virtual ~UHF();
     virtual void runSCF();

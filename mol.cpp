@@ -99,21 +99,60 @@ double MOL::massInit(const int& an)
     }
 }
 
+
+void MOL::readInput(const string& filename)
+{
+    ifstream ifs;
+    string flags;
+    ifs.open(filename);
+        for(int ii = 0; ii < Natom; ii++)
+            ifs >> basisSet(ii);
+        ifs >> charge >> flags;
+        nelec -= charge;
+        ifs >> spin >> flags;
+        if((nelec%2 && (spin == 1 || spin == 3)) || (nelec%2 - 1) && spin == 2)
+        {
+            cout << "ERROR: Spin state is NOT consistent with charge!" << endl;
+            exit(99);
+        }
+        else
+        {
+            switch (spin)
+            {
+            case 1:
+            case 2:
+                nelec_b = nelec / 2;
+                break;
+            case 3:
+                nelec_b = nelec / 2 - 1;
+                break;
+            default:
+                cout << "ERROR: Spin state " << spin << " is NOT supported!" << endl;
+                exit(99);
+                break;
+            }
+            nelec_a = nelec - nelec_b;
+        }
+    ifs.close();
+}
 /* Read and Write XYZ */
 void MOL::readxyz(const string& filename)
 {
     ifstream ifs;
     ifs.open(filename);
         ifs >> Natom;
-        Coord_cart.resize(Natom, 3);
-        atomicNumber.resize(Natom);
+        nelec = 0;
+        coordCart.resize(Natom);
+        atomList.resize(Natom);
         mass.resize(Natom);
+        basisSet.resize(Natom);
         // ifs.getline(flagc, 99);
         for(int ii = 0; ii < Natom; ii++)
         {
-            ifs >> atomicNumber(ii);
-            mass(ii) = massInit(atomicNumber(ii)) / ATOMIC_MASS_UNIT;
-            for(int jj = 0; jj < 3; jj++) ifs >> Coord_cart(ii, jj);
+            ifs >> atomList(ii);
+            nelec += atomList(ii);
+            mass(ii) = massInit(atomList(ii)) / ATOMIC_MASS_UNIT;
+            for(int jj = 0; jj < 3; jj++) ifs >> coordCart(ii)(jj);
         }
     ifs.close();
 }
@@ -124,12 +163,12 @@ void MOL::writexyz(const string& xyzfile)
         ofs << "\t" << Natom << endl << endl;
         for(int ii = 0; ii < Natom; ii++)
         {
-            ofs << fixed << setprecision(10) << atomicNumber(ii) << "\t" << Coord_cart(ii, 0) << "\t" << Coord_cart(ii, 1) << "\t" << Coord_cart(ii, 2) << endl;
+            ofs << fixed << setprecision(10) << atomList(ii) << "\t" << coordCart(ii)(0) << "\t" << coordCart(ii)(1) << "\t" << coordCart(ii)(2) << endl;
         }
     ofs.close();
 }
 
-/* transfer Coord_cart to center of mass coordinates */
+/* transfer coordCart to center of mass coordinates */
 void MOL::cart2COM()
 {
     double totalmass = 0.0;
@@ -140,14 +179,14 @@ void MOL::cart2COM()
         totalmass += mass(ii);
         for(int jj = 0; jj < 3; jj++)
         {
-            com(jj) += mass(ii) * Coord_cart(ii, jj);
+            com(jj) += mass(ii) * coordCart(ii)(jj);
         }
     }
     com = com / totalmass;
     for(int ii = 0; ii < Natom; ii++)
     for(int jj = 0; jj < 3; jj++)
     {
-        Coord_cart(ii, jj) = Coord_cart(ii, jj) - com(jj);
+        coordCart(ii)(jj) = coordCart(ii)(jj) - com(jj);
     }
 }
     
@@ -155,7 +194,7 @@ void MOL::cart2COM()
 double MOL::length(const int& i, const int& j)
 {
     Vector3d tmp;
-    for(int ii = 0; ii < 3; ii++) tmp(ii) = Coord_cart(i, ii) - Coord_cart(j, ii);
+    for(int ii = 0; ii < 3; ii++) tmp(ii) = coordCart(i)(ii) - coordCart(j)(ii);
     return tmp.norm();
 }
 /* Calculate bond angle phi_ijk between i, j and k atom */
@@ -165,8 +204,8 @@ double MOL::angle(const int& i, const int& j, const int& k)
     Vector3d tmp1, tmp2;
     for(int ii = 0; ii < 3; ii++)
     {
-        tmp1(ii) = Coord_cart(i, ii) - Coord_cart(j, ii);
-        tmp2(ii) = Coord_cart(k, ii) - Coord_cart(j, ii);
+        tmp1(ii) = coordCart(i)(ii) - coordCart(j)(ii);
+        tmp2(ii) = coordCart(k)(ii) - coordCart(j)(ii);
     }
     tmp = tmp1.transpose() * tmp2;
     tmp = tmp / tmp1.norm() / tmp2.norm();
@@ -180,9 +219,9 @@ double MOL::angle_ofp(const int& i, const int& j, const int& k, const int& l)
     Vector3d tmpi, tmpj, tmpl;
     for(int ii = 0; ii < 3; ii++)
     {
-        tmpi(ii) = Coord_cart(i, ii) - Coord_cart(k, ii);
-        tmpj(ii) = Coord_cart(j, ii) - Coord_cart(k, ii);
-        tmpl(ii) = Coord_cart(l, ii) - Coord_cart(k, ii);
+        tmpi(ii) = coordCart(i)(ii) - coordCart(k)(ii);
+        tmpj(ii) = coordCart(j)(ii) - coordCart(k)(ii);
+        tmpl(ii) = coordCart(l)(ii) - coordCart(k)(ii);
     }
     tmpi = tmpi / tmpi.norm();
     tmpj = tmpj / tmpj.norm();
@@ -197,9 +236,9 @@ double MOL::torsion(const int& i, const int& j, const int& k, const int& l)
     Vector3d tmp1, tmp2, tmp3;
     for(int ii = 0; ii < 3; ii++)
     {
-        tmp1(ii) = Coord_cart(j, ii) - Coord_cart(i, ii);
-        tmp2(ii) = Coord_cart(k, ii) - Coord_cart(j, ii);
-        tmp3(ii) = Coord_cart(l, ii) - Coord_cart(k, ii);
+        tmp1(ii) = coordCart(j)(ii) - coordCart(i)(ii);
+        tmp2(ii) = coordCart(k)(ii) - coordCart(j)(ii);
+        tmp3(ii) = coordCart(l)(ii) - coordCart(k)(ii);
     }
     tmp1 = tmp1 / tmp1.norm();
     tmp2 = tmp2 / tmp2.norm();
@@ -214,12 +253,12 @@ Matrix3d MOL::rotationI()
     I = I * 0.0;
     for(int ii = 0; ii < Natom; ii++)
     {
-        I(0, 0) += mass(ii) * (pow(Coord_cart(ii, 1), 2) + pow(Coord_cart(ii, 2), 2));
-        I(1, 1) += mass(ii) * (pow(Coord_cart(ii, 0), 2) + pow(Coord_cart(ii, 2), 2));
-        I(2, 2) += mass(ii) * (pow(Coord_cart(ii, 0), 2) + pow(Coord_cart(ii, 1), 2));
-        I(0, 1) += mass(ii) * Coord_cart(ii, 0) * Coord_cart(ii, 1);
-        I(0, 2) += mass(ii) * Coord_cart(ii, 0) * Coord_cart(ii, 2);
-        I(1, 2) += mass(ii) * Coord_cart(ii, 1) * Coord_cart(ii, 2);
+        I(0, 0) += mass(ii) * (pow(coordCart(ii)(1), 2) + pow(coordCart(ii)(2), 2));
+        I(1, 1) += mass(ii) * (pow(coordCart(ii)(0), 2) + pow(coordCart(ii)(2), 2));
+        I(2, 2) += mass(ii) * (pow(coordCart(ii)(0), 2) + pow(coordCart(ii)(1), 2));
+        I(0, 1) += mass(ii) * coordCart(ii)(0) * coordCart(ii)(1);
+        I(0, 2) += mass(ii) * coordCart(ii)(0) * coordCart(ii)(2);
+        I(1, 2) += mass(ii) * coordCart(ii)(1) * coordCart(ii)(2);
     }
     I(1, 0) = I(0, 1);
     I(2, 0) = I(0, 2);
