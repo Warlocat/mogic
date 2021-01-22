@@ -248,7 +248,8 @@ void RHF::runSCF()
         }
 
         eigensolverG(fock, overlap_half_i, ene_orb, coeff);
-        newDen = 0.5*(evaluateDensity(coeff, nelec_a) + density);
+        // newDen = 0.5*(evaluateDensity(coeff, nelec_a) + density);
+        newDen = evaluateDensity(coeff, nelec_a);
         d_density = evaluateChange(density, newDen);
         cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
         

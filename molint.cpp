@@ -17,7 +17,6 @@ double double_factorial(const int& n)
 {
     switch (n)
     {
-    case -1: return 1.0;
     case 0: return 1.0;
     case 1: return 1.0;
     case 2: return 2.0;
@@ -101,7 +100,7 @@ double Gamma(double z)
 double Boys(double x, int n)
 {
     if(abs(x)<1e-8) return (1.0/(1.0+2.0 * (double) n));
-    else return 0.5* pow(x,-0.5-n) * (Gamma(0.5 + n) - gsl_sf_gamma_inc(0.5+n,x));
+    else return 0.5* pow(x,-0.5-n) * (gsl_sf_gamma(0.5 + n) - gsl_sf_gamma_inc(0.5+n,x));
 }
 
 
@@ -125,6 +124,14 @@ double MOLINT::recurrence_E(const int& t, const int& i, const int& j, const doub
     else if(i == 0 && j==0 && t==0)
     {
         return exp(-mu*XAB*XAB);
+    }
+    else if(j == 0 && t != 0)
+    {
+        return pow(2.0*p,-t)*factorial(i)/factorial(t)/factorial(i-t)*recurrence_E(0,i-t,0,Ax,Bx,a,b);
+    }
+    else if(i == 0 && t != 0)
+    {
+        return pow(2.0*p,-t)*factorial(j)/factorial(t)/factorial(j-t)*recurrence_E(0,0,j-t,Ax,Bx,a,b);
     }
     else if(j == 0)
     {
@@ -185,13 +192,26 @@ double MOLINT::nucV_xyz(const int& lx1, const int& ly1, const int& lz1, const do
     for(int ia = 0; ia < Natom; ia++)
     {
         Vector3d Rpc = XP - coordList(ia);
-        double tmp = 0.0;
+
+        MatrixXd tmp1(lx1+lx2+1, ly1+ly2+1);
         for(int tt = 0; tt <= lx1 + lx2; tt++)
         for(int uu = 0; uu <= ly1 + ly2; uu++)
-        for(int vv = 0; vv <= lz1 + lz2; vv++)
         {
-            tmp += recurrence_R(0, tt, uu, vv, p, Rpc) * recurrence_E(tt,lx1,lx2,X1(0),X2(0),a1,a2) * recurrence_E(uu,ly1,ly2,X1(1),X2(1),a1,a2) * recurrence_E(vv,lz1,lz2,X1(2),X2(2),a1,a2);
+            tmp1(tt,uu) = 0.0;
+            for(int vv = 0; vv <= lz1 + lz2; vv++)
+                tmp1(tt,uu) += recurrence_R(0, tt, uu, vv, p, Rpc) * recurrence_E(vv,lz1,lz2,X1(2),X2(2),a1,a2);
         }
+        VectorXd tmp2(lx1+lx2+1);
+        for(int tt = 0; tt <= lx1 + lx2; tt++)
+        {
+            tmp2(tt) = 0.0;
+            for(int uu = 0; uu <= ly1 + ly2; uu++)
+                tmp2(tt) += tmp1(tt, uu) * recurrence_E(uu,ly1,ly2,X1(1),X2(1),a1,a2);
+        }
+        double tmp = 0.0;
+        for(int tt = 0; tt <= lx1 + lx2; tt++)
+            tmp += tmp2(tt) * recurrence_E(tt,lx1,lx2,X1(0),X2(0),a1,a2);
+
         nucV += -atomList(ia) * tmp;
     }
     nucV = nucV * 2.0 * M_PI / p;
@@ -202,6 +222,67 @@ double MOLINT::eri_xyz(const int& lx1, const int& ly1, const int& lz1, const dou
 {
     double p = a1+a2, q = a3+a4, alpha = p*q/(p+q);
     Vector3d Rpq = (a1 * X1 + a2 * X2) / p - (a3 * X3 + a4 * X4) / q;
+    // double tmp1[lx1+lx2+1][ly1+ly2+1][lz1+lz2+1][lx3+lx4+1][ly3+ly4+1];
+    // for(int tt = 0; tt <= lx1 + lx2; tt++)
+    // for(int uu = 0; uu <= ly1 + ly2; uu++)
+    // for(int vv = 0; vv <= lz1 + lz2; vv++)
+    // for(int ll = 0; ll <= lx3 + lx4; ll++)
+    // for(int mm = 0; mm <= ly3 + ly4; mm++)
+    // {
+    //     tmp1[tt][uu][vv][ll][mm] = 0.0;
+    //     for(int nn = 0; nn <= lz3 + lz4; nn++)
+    //     {
+    //         tmp1[tt][uu][vv][ll][mm] += pow(-1,ll+mm+nn) * recurrence_R(0, tt+ll, uu+mm, vv+nn, alpha, Rpq) * recurrence_E(nn,lz3,lz4,X3(2),X4(2),a3,a4);
+    //     }
+    // }
+    // double tmp2[lx1+lx2+1][ly1+ly2+1][lz1+lz2+1][lx3+lx4+1];
+    // for(int tt = 0; tt <= lx1 + lx2; tt++)
+    // for(int uu = 0; uu <= ly1 + ly2; uu++)
+    // for(int vv = 0; vv <= lz1 + lz2; vv++)
+    // for(int ll = 0; ll <= lx3 + lx4; ll++)
+    // {
+    //     tmp2[tt][uu][vv][ll] = 0.0;
+    //     for(int mm = 0; mm <= ly3 + ly4; mm++)
+    //     {
+    //         tmp2[tt][uu][vv][ll] += tmp1[tt][uu][vv][ll][mm] * recurrence_E(mm,ly3,ly4,X3(1),X4(1),a3,a4);
+    //     }
+    // }
+    // double tmp3[lx1+lx2+1][ly1+ly2+1][lz1+lz2+1];
+    // for(int tt = 0; tt <= lx1 + lx2; tt++)
+    // for(int uu = 0; uu <= ly1 + ly2; uu++)
+    // for(int vv = 0; vv <= lz1 + lz2; vv++)
+    // {
+    //     tmp3[tt][uu][vv] = 0.0;
+    //     for(int ll = 0; ll <= lx3 + lx4; ll++)
+    //     {
+    //         tmp3[tt][uu][vv] += tmp2[tt][uu][vv][ll] * recurrence_E(ll,lx3,lx4,X3(0),X4(0),a3,a4);
+    //     }
+    // }
+    // double tmp4[lx1+lx2+1][ly1+ly2+1];
+    // for(int tt = 0; tt <= lx1 + lx2; tt++)
+    // for(int uu = 0; uu <= ly1 + ly2; uu++)
+    // {
+    //     tmp4[tt][uu] = 0.0;
+    //     for(int vv = 0; vv <= lz1 + lz2; vv++)
+    //     {
+    //         tmp4[tt][uu] += tmp3[tt][uu][vv] * recurrence_E(vv,lz1,lz2,X1(2),X2(2),a1,a2);
+    //     }
+    // }
+    // double tmp5[lx1+lx2+1];
+    // for(int tt = 0; tt <= lx1 + lx2; tt++)
+    // {
+    //     tmp5[tt] = 0.0;
+    //     for(int uu = 0; uu <= ly1 + ly2; uu++)
+    //     {
+    //         tmp5[tt] += tmp4[tt][uu] * recurrence_E(uu,ly1,ly2,X1(1),X2(1),a1,a2);
+    //     }
+    // }
+    // double eri = 0.0;
+    // for(int tt = 0; tt <= lx1 + lx2; tt++)
+    // {
+    //     eri += tmp5[tt] * recurrence_E(tt,lx1,lx2,X1(0),X2(0),a1,a2);
+    // }
+
     double eri = 0.0;
     for(int tt = 0; tt <= lx1 + lx2; tt++)
     for(int uu = 0; uu <= ly1 + ly2; uu++)
@@ -212,6 +293,7 @@ double MOLINT::eri_xyz(const int& lx1, const int& ly1, const int& lz1, const dou
     {
         eri += pow(-1,ll+mm+nn) * recurrence_R(0, tt+ll, uu+mm, vv+nn, alpha, Rpq) * recurrence_E(tt,lx1,lx2,X1(0),X2(0),a1,a2) * recurrence_E(uu,ly1,ly2,X1(1),X2(1),a1,a2) * recurrence_E(vv,lz1,lz2,X1(2),X2(2),a1,a2) * recurrence_E(ll,lx3,lx4,X3(0),X4(0),a3,a4) * recurrence_E(mm,ly3,ly4,X3(1),X4(1),a3,a4) * recurrence_E(nn,lz3,lz4,X3(2),X4(2),a3,a4);
     }
+    
     eri = eri * 2.0 * pow(M_PI,2.5) / p / q / sqrt(p+q);
     return eri;
 }
@@ -303,7 +385,14 @@ void MOLINT::readBasis()
 
 inline double MOLINT::norm_factor(const int& lx, const int& ly, const int& lz, const double& a) const
 {
-    return pow(2 * a / M_PI, 0.75) * pow(4 * a, (double) (lx + ly + lz) / 2.0) / sqrt(double_factorial(2 * lx - 1) * double_factorial(2 * ly - 1) * double_factorial(2 * lz - 1));;
+    int ll = lx+ly+lz;
+    int nn = ll + 1;
+    double tmp = sqrt(sqrt(a/M_PI) * pow(a,nn) * pow(2.0,nn+1) / double_factorial(2*nn - 1));
+    // double tmp = pow(2 * a / M_PI, 0.75) * pow(4 * a, (double) (lx + ly + lz) / 2.0);
+    // lx>=1? tmp /= sqrt(double_factorial(2 * lx - 1)) : tmp /= 1;
+    // ly>=1? tmp /= sqrt(double_factorial(2 * ly - 1)) : tmp /= 1;
+    // lz>=1? tmp /= sqrt(double_factorial(2 * lz - 1)) : tmp /= 1;
+    return tmp;
 }
 
 
@@ -364,38 +453,38 @@ void MOLINT::evaluate_l_xyz_coeff()
         {
         case 0:
             xyz_coeff.resize(1,1);
-            xyz_coeff << 1.0;
+            xyz_coeff << 1.0 / sqrt(4.0*M_PI);
             break;
         case 1:
             xyz_coeff.resize(3,3);
-            xyz_coeff << 1,0,0,
-                         0,1,0,
-                         0,0,1;
+            xyz_coeff << sqrt(3.0/4.0*M_PI),0,0,
+                         0,sqrt(3.0/4.0*M_PI),0,
+                         0,0,sqrt(3.0/4.0*M_PI);
             break;
         case 2:
             xyz_coeff.resize(6,5);
-            xyz_coeff << 0, 0,-1, 0, 1,
-                         1, 0, 0, 0, 0,
-                         0, 0, 0, 1, 0,
-                         0, 0,-1, 0,-1,
-                         0, 1, 0, 0, 0,
-                         0, 0, 2, 0, 0;
+            xyz_coeff << 0, 0,-0.25*sqrt(5.0/M_PI), 0, 0.25*sqrt(15.0/M_PI),
+                         sqrt(15.0/4.0*M_PI), 0, 0, 0, 0,
+                         0, 0, 0, sqrt(15.0/4.0*M_PI), 0,
+                         0, 0,-0.25*sqrt(5.0/M_PI), 0,-0.25*sqrt(15.0/M_PI),
+                         0, sqrt(15.0/4.0*M_PI), 0, 0, 0,
+                         0, 0, 0.5*sqrt(5.0/M_PI), 0, 0;
             break;
         case 3:
             xyz_coeff.resize(10,7);
-            xyz_coeff << 0, 0, 0, 0,-1, 0, 1,
-                         3, 0,-1, 0, 0, 0, 0,
-                         0, 0, 0,-3, 0, 1, 0,
-                         0, 0, 0, 0,-1, 0,-3,
-                         0, 1, 0, 0, 0, 0, 0,
-                         0, 0, 0, 0, 4, 0, 0,
-                        -1, 0,-1, 0, 0, 0, 0,
-                         0, 0, 0,-3, 0,-1, 0,
-                         0, 0, 4, 0, 0, 0, 0,
-                         0, 0, 0, 2, 0, 0, 0;
+            xyz_coeff << 0, 0, 0, 0,-1*0.25*sqrt(21.0/2.0/M_PI), 0, 1*0.25*sqrt(35.0/2.0/M_PI),
+                         3*0.25*sqrt(35.0/2.0/M_PI), 0,-1*0.25*sqrt(21.0/2.0/M_PI), 0, 0, 0, 0,
+                         0, 0, 0,-3*0.25*sqrt(7.0/M_PI), 0, 0.25*sqrt(105.0/M_PI), 0,
+                         0, 0, 0, 0,-1*0.25*sqrt(21.0/2.0/M_PI), 0,-3*0.25*sqrt(35.0/2.0/M_PI),
+                         0, 0.5*sqrt(105.0/M_PI), 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 4*0.25*sqrt(21.0/2.0/M_PI), 0, 0,
+                        -1*0.25*sqrt(35.0/2.0/M_PI), 0,-1*0.25*sqrt(21.0/2.0/M_PI), 0, 0, 0, 0,
+                         0, 0, 0,-3*0.25*sqrt(7.0/M_PI), 0,-0.25*sqrt(105.0/M_PI), 0,
+                         0, 0, 4*0.25*sqrt(21.0/2.0/M_PI), 0, 0, 0, 0,
+                         0, 0, 0, 2*0.25*sqrt(7.0/M_PI), 0, 0, 0;
             break;
         default:
-            cout << "Error: L above 4 is not supported." << endl;
+            cout << "Error: L above 3 is not supported." << endl;
             break;
         }
         MatrixXi xyz_i = l_xyz(ll);
@@ -408,7 +497,7 @@ void MOLINT::evaluate_l_xyz_coeff()
                 for(int iii = 0; iii < xyz_i.rows(); iii++)
                 for(int jjj = 0; jjj < 2*ll+1; jjj++)
                 {
-                    l_xyz_coeff(ishell)(ii*xyz_i.rows()+iii, ii*(2*ll+1)+jjj) = xyz_coeff(iii,jjj);
+                    l_xyz_coeff(ishell)(ii*xyz_i.rows()+iii, ii*(2*ll+1)+jjj) = xyz_coeff(iii,jjj) * norm_factor(xyz_i(iii,0), xyz_i(iii,1), xyz_i(iii,2), shell_list(ishell).exp_a(ii));
                 }
             }
         }
@@ -422,7 +511,7 @@ void MOLINT::evaluate_l_xyz_coeff()
                 for(int iii = 0; iii < xyz_i.rows(); iii++)
                 for(int jjj = 0; jjj < 2*ll+1; jjj++)
                 {
-                    l_xyz_coeff(ishell)(ii*xyz_i.rows()+iii, jj*(2*ll+1)+jjj) = shell_list(ishell).coeff(ii,jj) * xyz_coeff(iii,jjj);
+                    l_xyz_coeff(ishell)(ii*xyz_i.rows()+iii, jj*(2*ll+1)+jjj) = shell_list(ishell).coeff(ii,jj) * xyz_coeff(iii,jjj) * norm_factor(xyz_i(iii,0), xyz_i(iii,1), xyz_i(iii,2), shell_list(ishell).exp_a(ii));
                 }
             }
         }
@@ -439,8 +528,8 @@ void MOLINT::evaluate_l_xyz_coeff()
                 {
                     for(int jxyz = 0; jxyz < xyz_i.rows(); jxyz++)
                     {
-                        double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(ii))*norm_factor(xyz_i(jxyz,0), xyz_i(jxyz,1), xyz_i(jxyz,2), shell_list(ishell).exp_a(jj));
-                        overlap_xyz_tmp(tmp_i,tmp_j) = overlap_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(ii), tmpCoord, xyz_i(jxyz,0), xyz_i(jxyz,1), xyz_i(jxyz,2), shell_list(ishell).exp_a(jj), tmpCoord) * norm;
+                        // double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(ii))*norm_factor(xyz_i(jxyz,0), xyz_i(jxyz,1), xyz_i(jxyz,2), shell_list(ishell).exp_a(jj));
+                        overlap_xyz_tmp(tmp_i,tmp_j) = overlap_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(ii), tmpCoord, xyz_i(jxyz,0), xyz_i(jxyz,1), xyz_i(jxyz,2), shell_list(ishell).exp_a(jj), tmpCoord);
                         tmp_j++;
                     }
                 }
@@ -501,7 +590,8 @@ MatrixXd MOLINT::get_h1e(const string& intName) const
                 for(int jsubshell = 0; jsubshell < size_shell_j; jsubshell++)
                 for(int jxyz = 0; jxyz < xyz_j.rows(); jxyz++)
                 {
-                    double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell))*norm_factor(xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell));
+                    // double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell))*norm_factor(xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell));
+                    double norm = 1.0;
                     if(intName == "overlap") h1e_unc_xyz_tmp(tmp1,tmp2) = overlap_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord) * norm;
                     else if(intName == "kinetic") h1e_unc_xyz_tmp(tmp1,tmp2) = kinetic_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord) * norm;
                     else if(intName == "nucV") h1e_unc_xyz_tmp(tmp1,tmp2) = nucV_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord) * norm;
@@ -595,7 +685,8 @@ VectorXd MOLINT::get_h2e(const string& intName) const
                                 for(int lsubshell = 0; lsubshell < size_shell_l; lsubshell++)
                                 for(int lxyz = 0; lxyz < xyz_l.rows(); lxyz++)
                                 {
-                                    double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell))*norm_factor(xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell))*norm_factor(xyz_k(kxyz,0), xyz_k(kxyz,1), xyz_k(kxyz,2), shell_list(kshell).exp_a(ksubshell))*norm_factor(xyz_l(lxyz,0), xyz_l(lxyz,1), xyz_l(lxyz,2), shell_list(lshell).exp_a(lsubshell));
+                                    // double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell))*norm_factor(xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell))*norm_factor(xyz_k(kxyz,0), xyz_k(kxyz,1), xyz_k(kxyz,2), shell_list(kshell).exp_a(ksubshell))*norm_factor(xyz_l(lxyz,0), xyz_l(lxyz,1), xyz_l(lxyz,2), shell_list(lshell).exp_a(lsubshell));
+                                    double norm = 1.0;
                                     if(intName == "eriLLLL") h2e_tmp_xyz[tmp1][tmp2][tmp3][tmp4] = eri_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord, xyz_k(kxyz,0), xyz_k(kxyz,1), xyz_k(kxyz,2), shell_list(kshell).exp_a(ksubshell), shell_list(kshell).coord, xyz_l(lxyz,0), xyz_l(lxyz,1), xyz_l(lxyz,2), shell_list(lshell).exp_a(lsubshell), shell_list(lshell).coord) * norm;
                                     else
                                     {

@@ -1,6 +1,7 @@
 #include<iostream>
 #include<fstream>
 #include<omp.h>
+#include<iomanip>
 #include"mol.h"
 #include"molint.h"
 #include"scf.h"
@@ -15,21 +16,76 @@ double get_energy_MP2(const VectorXd& h2e_mo, const VectorXd& ene_mo, const int&
 int main()
 {
     MOL mol_test;
-    mol_test.readxyz("test.xyz");
+    mol_test.readxyz("h2o.xyz");
     mol_test.readInput("inputFile");
-    MOLINT molint_test(mol_test,false);
+    // cout << mol_test.atomList << endl;
+    // cout << mol_test.basisSet << endl;
+    // for(int ii = 0; ii < mol_test.coordCart.rows(); ii++)
+    //     cout << mol_test.coordCart(ii).transpose() << endl;
 
-    MatrixXd s = molint_test.get_h1e("kinetic");
-    for(int ii = 0; ii < s.rows(); ii++)
-    for(int jj = 0; jj <= ii ; jj++)
-    {
-        cout << s(ii,jj) << endl;
-    }
+    //MOLINT molint_test(mol_test,false);
+    MOLINT molint_test(mol_test,true);
+
+    // MatrixXd s = molint_test.get_h1e("nucV");
+    // for(int ii = 0; ii < s.rows(); ii++)
+    // for(int jj = 0; jj < ii+1 ; jj++)
+    // {
+    //    cout << s(ii,jj) << endl;
+    // }
     // MatrixXd eri = molint_test.get_h2e("eriLLLL");
-    // cout << eri << endl;
+    // for(int ii = 0; ii < eri.rows(); ii++)
+    //     cout << setprecision(15) << eri(ii) << endl;
+// cout << molint_test.get_V_RR() << endl;
+    MatrixXd s = molint_test.get_h1e("overlap");
+    MatrixXd t = molint_test.get_h1e("kinetic");
+    MatrixXd v = molint_test.get_h1e("nucV");
+    VectorXd eri = molint_test.get_h2e("eriLLLL");
+    double e_nuc = molint_test.get_V_RR();
+    int size = s.rows();
+    
+    ofstream ofs;
+    ofs.open("s.dat");
+        for(int ii = 0; ii < size; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+            ofs << ii+1 << "\t" << jj+1 << "\t" << setprecision(16) << s(ii,jj) << endl;
+    ofs.close();
+    ofs.open("t.dat");
+        for(int ii = 0; ii < size; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+            ofs << ii+1 << "\t" << jj+1 << "\t" << setprecision(16) << t(ii,jj) << endl;
+    ofs.close();
+    ofs.open("v.dat");
+        for(int ii = 0; ii < size; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+            ofs << ii+1 << "\t" << jj+1 << "\t" << setprecision(16) << v(ii,jj) << endl;
+    ofs.close();
+    ofs.open("enuc.dat");
+        ofs << setprecision(16) << e_nuc << endl;
+    ofs.close();
+    ofs.open("eri.dat");
+        for(int ii = 0; ii < size; ii++)
+        for(int jj = 0; jj <= ii; jj++)
+        for(int kk = 0; kk < size; kk++)
+        for(int ll = 0; ll <= kk; ll++)
+        {
+            int ij = ii*(ii+1)/2+jj, kl = kk*(kk+1)/2+ll;
+            if(ij < kl) continue;
+            else
+            {
+                int ijkl = ij*(ij+1)/2+kl;
+                ofs << ii+1 << "\t" << jj+1 << "\t" << kk+1 << "\t" << ll+1 << "\t" << eri(ijkl) << endl;
+            }
+            
+        }
+    ofs.close();
+
 
     // RHF rhf_test(mol_test, molint_test.get_h1e("overlap"), molint_test.get_h1e("kinetic"), molint_test.get_h1e("nucV"), molint_test.get_h2e("eriLLLL"), molint_test.get_V_RR());
     // rhf_test.runSCF();
+
+
+    RHF rhf_test(5,5,s.rows());
+    rhf_test.runSCF();
 
 
     return 0;
