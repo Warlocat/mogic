@@ -1,36 +1,11 @@
 #include<iostream>
 #include<fstream>
 #include<omp.h>
-#include"mol.h"
-#include"scf.h"
-#include"ccsd.h"
+#include"intTrans.h"
 using namespace std;
 using namespace Eigen;
 
-VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, const string alg = "smart");
-VectorXd integralTransfermation_spatial2spin(const VectorXd& h2e_mo, const int& size_basis);
-double get_energy_MP2(const VectorXd& h2e_mo, const VectorXd& ene_mo, const int& nelec_a, const int& nelec_b);
-
-int main()
-{
-    double ene_total;
-    int nelec_a = 5, nelec_b = 5, size_basis = 14;
-    RHF rhf_test(nelec_a, nelec_b, size_basis);
-    rhf_test.runSCF();
-    VectorXd h2e_mo = integralTransfermation(rhf_test.get_h2e_vector(), rhf_test.coeff, "smart");
-    double ene_mp2 = get_energy_MP2(h2e_mo, rhf_test.ene_orb, nelec_a, nelec_b);
-    cout << ene_mp2 << "\t" << rhf_test.ene_scf + ene_mp2 << endl;
-    VectorXd h2e_mo_so = integralTransfermation_spatial2spin(h2e_mo, size_basis);
-    CCSD ccsd_test(nelec_a+nelec_b, size_basis*2-nelec_a-nelec_b, h2e_mo_so, rhf_test.ene_orb);
-    ccsd_test.runCCSD_pT();
-    
-    ene_total = rhf_test.ene_scf + ccsd_test.ene_ccsd;
-    cout << "Total energy :" << ene_total << " hartree." << endl;
-    cout << "Congratulation! This program finished successfully!"  << endl;
-    return 0;
-}
-
-
+/* Integral transformation from AO to restricted MO */
 VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, const string alg)
 {
     VectorXd h2e_mo;
@@ -58,7 +33,6 @@ VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, c
                 {
                     int ab = max(aa,bb)*(max(aa,bb)+1)/2+min(aa,bb), cd = max(cc,dd)*(max(cc,dd)+1)/2+min(cc,dd);
                     int abcd = max(ab,cd)*(max(ab,cd)+1)/2+min(ab,cd);
-                    // h2e_mo += conj(coeff(aa,ii))*coeff(bb,jj)*conj(coeff(cc,kk))*coeff(dd,ll)*h2e_ao(abcd);
                     h2e_mo(index) += coeff(aa,ii)*coeff(bb,jj)*coeff(cc,kk)*coeff(dd,ll)*h2e_ao(abcd);
                 }
             }
@@ -144,6 +118,8 @@ VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, c
     return h2e_mo;
 }
 
+
+/* Integral transformation from AO to spin orbitals */
 VectorXd integralTransfermation_spatial2spin(const VectorXd& h2e_mo, const int& size_basis)
 {
     int tmp_i = 2*size_basis*(2*size_basis+1)/2 + 2*size_basis;
@@ -171,7 +147,7 @@ VectorXd integralTransfermation_spatial2spin(const VectorXd& h2e_mo, const int& 
 }
 
 
-
+/* Evaluate MP2 energy */
 double get_energy_MP2(const VectorXd& h2e_mo, const VectorXd& ene_mo, const int& nelec_a, const int& nelec_b)
 {
     double ene_MP2 = 0.0;

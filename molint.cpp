@@ -222,6 +222,8 @@ double MOLINT::eri_xyz(const int& lx1, const int& ly1, const int& lz1, const dou
 {
     double p = a1+a2, q = a3+a4, alpha = p*q/(p+q);
     Vector3d Rpq = (a1 * X1 + a2 * X2) / p - (a3 * X3 + a4 * X4) / q;
+
+
     // double tmp1[lx1+lx2+1][ly1+ly2+1][lz1+lz2+1][lx3+lx4+1][ly3+ly4+1];
     // for(int tt = 0; tt <= lx1 + lx2; tt++)
     // for(int uu = 0; uu <= ly1 + ly2; uu++)
@@ -387,12 +389,7 @@ inline double MOLINT::norm_factor(const int& lx, const int& ly, const int& lz, c
 {
     int ll = lx+ly+lz;
     int nn = ll + 1;
-    double tmp = sqrt(sqrt(a/M_PI) * pow(a,nn) * pow(2.0,nn+1) / double_factorial(2*nn - 1));
-    // double tmp = pow(2 * a / M_PI, 0.75) * pow(4 * a, (double) (lx + ly + lz) / 2.0);
-    // lx>=1? tmp /= sqrt(double_factorial(2 * lx - 1)) : tmp /= 1;
-    // ly>=1? tmp /= sqrt(double_factorial(2 * ly - 1)) : tmp /= 1;
-    // lz>=1? tmp /= sqrt(double_factorial(2 * lz - 1)) : tmp /= 1;
-    return tmp;
+    return sqrt(sqrt(a/M_PI) * pow(a,nn) * pow(2.0,nn+1) / double_factorial(2*nn - 1));
 }
 
 
@@ -590,11 +587,9 @@ MatrixXd MOLINT::get_h1e(const string& intName) const
                 for(int jsubshell = 0; jsubshell < size_shell_j; jsubshell++)
                 for(int jxyz = 0; jxyz < xyz_j.rows(); jxyz++)
                 {
-                    // double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell))*norm_factor(xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell));
-                    double norm = 1.0;
-                    if(intName == "overlap") h1e_unc_xyz_tmp(tmp1,tmp2) = overlap_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord) * norm;
-                    else if(intName == "kinetic") h1e_unc_xyz_tmp(tmp1,tmp2) = kinetic_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord) * norm;
-                    else if(intName == "nucV") h1e_unc_xyz_tmp(tmp1,tmp2) = nucV_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord) * norm;
+                    if(intName == "overlap") h1e_unc_xyz_tmp(tmp1,tmp2) = overlap_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord);
+                    else if(intName == "kinetic") h1e_unc_xyz_tmp(tmp1,tmp2) = kinetic_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord);
+                    else if(intName == "nucV") h1e_unc_xyz_tmp(tmp1,tmp2) = nucV_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord);
                     else
                     {
                         cout << "Error: get_h1e called with an unknown intName." << endl;
@@ -685,9 +680,7 @@ VectorXd MOLINT::get_h2e(const string& intName) const
                                 for(int lsubshell = 0; lsubshell < size_shell_l; lsubshell++)
                                 for(int lxyz = 0; lxyz < xyz_l.rows(); lxyz++)
                                 {
-                                    // double norm = norm_factor(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell))*norm_factor(xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell))*norm_factor(xyz_k(kxyz,0), xyz_k(kxyz,1), xyz_k(kxyz,2), shell_list(kshell).exp_a(ksubshell))*norm_factor(xyz_l(lxyz,0), xyz_l(lxyz,1), xyz_l(lxyz,2), shell_list(lshell).exp_a(lsubshell));
-                                    double norm = 1.0;
-                                    if(intName == "eriLLLL") h2e_tmp_xyz[tmp1][tmp2][tmp3][tmp4] = eri_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord, xyz_k(kxyz,0), xyz_k(kxyz,1), xyz_k(kxyz,2), shell_list(kshell).exp_a(ksubshell), shell_list(kshell).coord, xyz_l(lxyz,0), xyz_l(lxyz,1), xyz_l(lxyz,2), shell_list(lshell).exp_a(lsubshell), shell_list(lshell).coord) * norm;
+                                    if(intName == "eriLLLL") h2e_tmp_xyz[tmp1][tmp2][tmp3][tmp4] = eri_xyz(xyz_i(ixyz,0), xyz_i(ixyz,1), xyz_i(ixyz,2), shell_list(ishell).exp_a(isubshell), shell_list(ishell).coord, xyz_j(jxyz,0), xyz_j(jxyz,1), xyz_j(jxyz,2), shell_list(jshell).exp_a(jsubshell), shell_list(jshell).coord, xyz_k(kxyz,0), xyz_k(kxyz,1), xyz_k(kxyz,2), shell_list(kshell).exp_a(ksubshell), shell_list(kshell).coord, xyz_l(lxyz,0), xyz_l(lxyz,1), xyz_l(lxyz,2), shell_list(lshell).exp_a(lsubshell), shell_list(lshell).coord);
                                     else
                                     {
                                         cout << "Error: get_h2e called with an unknown intName." << endl;

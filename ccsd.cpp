@@ -286,6 +286,9 @@ void CCSD::evaluate_W_F()
 
 void CCSD::evaluate_t1t2New()
 {
+    t1_new = t1;
+    t2_new = t2;
+
     for(int ii = 0; ii < n_occ; ii++)
     for(int aa = 0; aa < n_vir; aa++)
     {
@@ -311,6 +314,8 @@ void CCSD::evaluate_t1t2New()
         }
         t1_new(ii,aa) = t1_new(ii,aa) / D1(ii,aa);
 
+
+        // t2 amplitudes
         for(int jj = 0; jj < n_occ; jj++)
         for(int bb = 0; bb < n_vir; bb++)
         {
@@ -383,6 +388,7 @@ void CCSD::runCCSD()
     memoryAllocation();
     int iteration = 0;
     double d_t1 = 10, d_t2 = 10, ene_new, de;
+    cout << endl << "Start CCSD iterations......" << endl;
     while(max(d_t1,d_t2) >= convControl)
     {
         iteration++;
@@ -400,6 +406,7 @@ void CCSD::runCCSD()
         t2 = t2_new;
         ene_ccsd = ene_new;
     }
+    converged = true;
     cout << endl << "CCSD converges after " << iteration << " iterations." << endl;
     cout << "Final CCSD energy is " << setprecision(16) << ene_ccsd << " hartree." << endl;
     memoryDeallocation();
@@ -409,8 +416,9 @@ void CCSD::runCCSD()
 
 void CCSD::runCCSD_pT()
 {
-    runCCSD();
+    if(!converged) runCCSD();
     double mem = pow(n_occ,3)*pow(n_vir,3) * 5 *sizeof(double) / 1024.0 / 1024.0;
+    cout << endl << "Start CCSD(T) calculations......" << endl;
     cout << "CCSD(T) calculation is called. It requires " << mem << " MB memory." << endl;
     double D3[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
     double tmp_c[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir], tmp_d[n_occ][n_occ][n_occ][n_vir][n_vir][n_vir];
@@ -433,7 +441,7 @@ void CCSD::runCCSD_pT()
             tmp_c[ii][jj][kk][aa][bb][cc] -= t2(ii*n_occ+mm,bb*n_vir+cc) * h2e_dirac_so(mm,aa+n_occ,jj,kk);
     }
 
-    double ene_pT = 0.0;
+    ene_pT = 0.0;
     for(int ii = 0; ii < n_occ; ii++)
     for(int jj = 0; jj < n_occ; jj++)
     for(int kk = 0; kk < n_occ; kk++)
@@ -450,9 +458,8 @@ void CCSD::runCCSD_pT()
         ene_pT += 1.0/36.0 * D3t3c[ii][jj][kk][aa][bb][cc] * (D3t3c[ii][jj][kk][aa][bb][cc] + D3t3d[ii][jj][kk][aa][bb][cc]) / D3[ii][jj][kk][aa][bb][cc];
     }
 
-    ene_ccsd = ene_ccsd + ene_pT;
     cout << "E((T)) = " << ene_pT << " hartree." << endl;
-    cout << "Final E(CCSD(T)) = " << ene_ccsd << " hartree." << endl; 
+    cout << "Final E(CCSD(T)) = " << ene_ccsd + ene_pT << " hartree." << endl; 
 
     return;
 }
