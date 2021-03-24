@@ -29,7 +29,7 @@ protected:
 
 public:
     bool converged = false;
-    int maxIter = 200, size_DIIS = 6;
+    int maxIter = 200, size_DIIS = 8;
     double ene_scf, convControl = 1e-12;
 
     SCF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_);

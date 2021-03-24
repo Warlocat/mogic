@@ -294,22 +294,41 @@ void RHF::runSCF()
         eigensolverG(fock, overlap_half_i, ene_orb, coeff);
         // newDen = 0.5*(evaluateDensity(coeff, nelec_a) + density);
         newDen = evaluateDensity(coeff, nelec_a);
+        d_density = evaluateChange(density, newDen);
+        cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
+        density = newDen;
+        #pragma omp parallel  for
+        for(int mm = 0; mm < size_basis; mm++)
+        for(int nn = 0; nn <= mm; nn++)
+        {
+            fock(mm,nn) = h1e(mm,nn);
+            for(int aa = 0; aa < size_basis; aa++)
+            for(int bb = 0; bb < size_basis; bb++)
+            {
+                int ab, mn, an, mb, abmn, anmb;
+                ab = max(aa,bb)*(max(aa,bb)+1)/2 + min(aa,bb);
+                mn = max(mm,nn)*(max(mm,nn)+1)/2 + min(mm,nn);
+                an = max(aa,nn)*(max(aa,nn)+1)/2 + min(aa,nn);
+                mb = max(mm,bb)*(max(mm,bb)+1)/2 + min(mm,bb);
+                abmn = max(ab,mn)*(max(ab,mn)+1)/2 + min(ab,mn);
+                anmb = max(an,mb)*(max(an,mb)+1)/2 + min(an,mb);
+                fock(mm,nn) += density(aa,bb) * (2.0 * h2e(abmn) - h2e(anmb));
+            }
+            fock(nn,mm) = fock(mm,nn);
+        }
         if(error4DIIS.size() >= size_DIIS)
         {
             error4DIIS.erase(error4DIIS.begin());
-            error4DIIS.push_back(evaluateErrorDIIS(fock,newDen));
+            error4DIIS.push_back(evaluateErrorDIIS(fock,density));
             fock4DIIS.erase(fock4DIIS.begin());
             fock4DIIS.push_back(fock);
         }
         else
         {
-            error4DIIS.push_back(evaluateErrorDIIS(fock,newDen));
+            error4DIIS.push_back(evaluateErrorDIIS(fock,density));
             fock4DIIS.push_back(fock);
         }
-        d_density = evaluateChange(density, newDen);
-        cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
         
-        density = newDen;
         if(d_density < convControl) 
         {
             converged = true;
@@ -370,6 +389,7 @@ UHF::~UHF()
 
 void UHF::runSCF()
 {
+    vector<MatrixXd> error_a4DIIS, error_b4DIIS, fock_a4DIIS, fock_b4DIIS;
     fock_a.resize(size_basis, size_basis);
     fock_b.resize(size_basis, size_basis);
     MatrixXd newDen_a, newDen_b, density_total;
@@ -381,6 +401,72 @@ void UHF::runSCF()
 
     for(int iter = 1; iter <= maxIter; iter++)
     {
+        if(iter <= 2)
+        {
+            #pragma omp parallel  for
+            for(int mm = 0; mm < size_basis; mm++)
+            for(int nn = 0; nn < size_basis; nn++)
+            {
+                fock_a(mm,nn) = h1e(mm,nn);
+                fock_b(mm,nn) = h1e(mm,nn);
+                for(int aa = 0; aa < size_basis; aa++)
+                for(int bb = 0; bb < size_basis; bb++)
+                {
+                    int ab, mn, an, mb, abmn, anmb;
+                    ab = max(aa,bb)*(max(aa,bb)+1)/2 + min(aa,bb);
+                    mn = max(mm,nn)*(max(mm,nn)+1)/2 + min(mm,nn);
+                    an = max(aa,nn)*(max(aa,nn)+1)/2 + min(aa,nn);
+                    mb = max(mm,bb)*(max(mm,bb)+1)/2 + min(mm,bb);
+                    abmn = max(ab,mn)*(max(ab,mn)+1)/2 + min(ab,mn);
+                    anmb = max(an,mb)*(max(an,mb)+1)/2 + min(an,mb);
+                    fock_a(mm,nn) += density_total(aa,bb) * h2e(abmn) - density_a(aa,bb) * h2e(anmb);
+                    fock_b(mm,nn) += density_total(aa,bb) * h2e(abmn) - density_b(aa,bb) * h2e(anmb);
+                }
+            }
+        }
+        else
+        {
+            int tmp_size = fock_a4DIIS.size();
+            MatrixXd B_a4DIIS(tmp_size+1,tmp_size+1), B_b4DIIS(tmp_size+1,tmp_size+1);
+            VectorXd vec_b(tmp_size+1);
+            for(int ii = 0; ii < tmp_size; ii++)
+            {    
+                for(int jj = 0; jj <= ii; jj++)
+                {
+                    B_a4DIIS(ii,jj) = (error_a4DIIS[ii].adjoint()*error_a4DIIS[jj])(0,0);
+                    B_a4DIIS(jj,ii) = B_a4DIIS(ii,jj);
+                    B_b4DIIS(ii,jj) = (error_b4DIIS[ii].adjoint()*error_b4DIIS[jj])(0,0);
+                    B_b4DIIS(jj,ii) = B_b4DIIS(ii,jj);
+                }
+                B_a4DIIS(tmp_size, ii) = -1.0;
+                B_a4DIIS(ii, tmp_size) = -1.0;
+                B_b4DIIS(tmp_size, ii) = -1.0;
+                B_b4DIIS(ii, tmp_size) = -1.0;
+                vec_b(ii) = 0.0;
+            }
+            B_a4DIIS(tmp_size, tmp_size) = 0.0;
+            B_b4DIIS(tmp_size, tmp_size) = 0.0;
+            vec_b(tmp_size) = -1.0;
+            VectorXd C_a = B_a4DIIS.partialPivLu().solve(vec_b);
+            VectorXd C_b = B_b4DIIS.partialPivLu().solve(vec_b);
+            fock_a = MatrixXd::Zero(size_basis,size_basis);
+            fock_b = MatrixXd::Zero(size_basis,size_basis);
+            for(int ii = 0; ii < tmp_size; ii++)
+            {
+                fock_a += C_a(ii) * fock_a4DIIS[ii];
+                fock_b += C_b(ii) * fock_b4DIIS[ii];
+            }
+        }
+        eigensolverG(fock_a, overlap_half_i, ene_orb_a, coeff_a);
+        eigensolverG(fock_b, overlap_half_i, ene_orb_b, coeff_b);
+        newDen_a = evaluateDensity(coeff_a, nelec_a);
+        newDen_b = evaluateDensity(coeff_b, nelec_b);
+        d_density_a = evaluateChange(density_a, newDen_a);
+        d_density_b = evaluateChange(density_b, newDen_b);
+        cout << "Iter #" << iter << " maximum density difference :\talpha " << d_density_a << "\t\tbeta " << d_density_b << endl;
+        density_a = newDen_a;
+        density_b = newDen_b;
+        density_total = density_a + density_b;
         #pragma omp parallel  for
         for(int mm = 0; mm < size_basis; mm++)
         for(int nn = 0; nn < size_basis; nn++)
@@ -401,20 +487,31 @@ void UHF::runSCF()
                 fock_b(mm,nn) += density_total(aa,bb) * h2e(abmn) - density_b(aa,bb) * h2e(anmb);
             }
         }
-        eigensolverG(fock_a, overlap_half_i, ene_orb_a, coeff_a);
-        eigensolverG(fock_b, overlap_half_i, ene_orb_b, coeff_b);
-        newDen_a = evaluateDensity(coeff_a, nelec_a);
-        newDen_b = evaluateDensity(coeff_b, nelec_b);
 
-        d_density_a = evaluateChange(density_a, newDen_a);
-        d_density_b = evaluateChange(density_b, newDen_b);
-        cout << "Iter #" << iter << " maximum density difference :\talpha " << d_density_a << "\t\tbeta " << d_density_b << endl;
-            
-        // density_a = 0.5 * (newDen_a + density_a);
-        // density_b = 0.5 * (newDen_b + density_b);
-        density_a = newDen_a;
-        density_b = newDen_b;
-        density_total = density_a + density_b;
+        if(error_a4DIIS.size() >= size_DIIS)
+        {
+            error_a4DIIS.erase(error_a4DIIS.begin());
+            error_a4DIIS.push_back(evaluateErrorDIIS(fock_a,density_a));
+            fock_a4DIIS.erase(fock_a4DIIS.begin());
+            fock_a4DIIS.push_back(fock_a);
+            error_b4DIIS.erase(error_b4DIIS.begin());
+            error_b4DIIS.push_back(evaluateErrorDIIS(fock_b,density_b));
+            fock_b4DIIS.erase(fock_b4DIIS.begin());
+            fock_b4DIIS.push_back(fock_b);
+        }
+        else
+        {
+            error_a4DIIS.push_back(evaluateErrorDIIS(fock_a,density_a));
+            fock_a4DIIS.push_back(fock_a);
+            error_b4DIIS.push_back(evaluateErrorDIIS(fock_b,density_b));
+            fock_b4DIIS.push_back(fock_b);
+        }
+
+
+
+
+        
+        
         if(max(d_density_a,d_density_b) < convControl) 
         {
             converged = true;
