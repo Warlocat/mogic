@@ -17,7 +17,7 @@ protected:
     MatrixXd overlap, overlap_half_i, h1e;
     VectorXd h2e;
 
-    MatrixXd evaluateErrorDIIS(const MatrixXd fock_, const MatrixXd density_);
+    MatrixXd evaluateErrorDIIS(const MatrixXd& fock_, const MatrixXd& density_);
 
     static void readIntegrals_1e(MatrixXd& int_1e, const string& filename);
     static void readIntegrals_2e(VectorXd& int_2e, const string& filename);

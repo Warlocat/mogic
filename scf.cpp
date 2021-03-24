@@ -41,7 +41,7 @@ SCF::~SCF()
 }
 
 
-MatrixXd SCF::evaluateErrorDIIS(const MatrixXd fock_, const MatrixXd density_)
+MatrixXd SCF::evaluateErrorDIIS(const MatrixXd& fock_, const MatrixXd& density_)
 {
     MatrixXd tmp = fock_*density_*overlap - overlap*density_*fock_;
     MatrixXd err(size_basis*size_basis,1);

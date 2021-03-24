@@ -3,6 +3,7 @@
 #include<iostream>
 #include<iomanip>
 #include<fstream>
+#include<vector>
 
 CCSD::CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_mo_so_, const VectorXd& ene_mo_):
 n_occ(n_occ_), n_vir(n_vir_), h2e_mo_so(h2e_mo_so_)
@@ -52,7 +53,7 @@ inline double CCSD::h2e_dirac_so(const int& ii, const int& jj, const int& kk, co
 
 void CCSD::memoryAllocation()
 {
-    double size = (pow(n_occ,2)*pow(n_vir,2)*5 + pow(n_occ,4) + pow(n_vir,4) + pow(n_occ,2)*pow(n_vir,2) + n_vir*n_vir + n_occ*n_occ + n_vir*n_occ + n_occ*n_vir*3) * sizeof(double) / 1024.0 / 1024.0;
+    double size = (pow(n_occ,2)*pow(n_vir,2)*5 + pow(n_occ,4) + pow(n_vir,4) + pow(n_occ,2)*pow(n_vir,2) + n_vir*n_vir + n_occ*n_occ + n_vir*n_occ + n_occ*n_vir*3) * sizeof(double) / 1024.0 / 1024.0 * (size_DIIS + 1);
 
     cout << "Memory requirement: " << size << " MB.\n";
 
@@ -180,6 +181,22 @@ void CCSD::memoryDeallocation()
     for(int mm = 0; mm < n_occ; mm++)
         delete[] F_ov[mm];
     delete[] F_ov;
+}
+
+MatrixXd CCSD::evaluateErrorDIIS(const MatrixXd& t1_old, const MatrixXd& t1_new, const MatrixXd& t2_old, const MatrixXd& t2_new)
+{
+    MatrixXd err(t1_old.rows()*t1_old.cols() + t2_old.rows()*t2_old.cols(),1);
+    for(int ii = 0; ii < t1_old.rows(); ii++)
+    for(int jj = 0; jj < t1_old.cols(); jj++)
+    {
+        err(ii*t1_old.rows() + jj) = t1_new(ii,jj) - t1_old(ii,jj);
+    }
+    for(int ii = 0; ii < t2_old.rows(); ii++)
+    for(int jj = 0; jj < t2_old.cols(); jj++)
+    {
+        err(t1_old.rows()*t1_old.cols() + ii*t2_old.rows() + jj) = t2_new(ii,jj) - t2_old(ii,jj);
+    }
+    return err;
 }
 
 void CCSD::evaluate_tau()
@@ -386,31 +403,104 @@ double CCSD::evaluate_ene_ccsd()
 void CCSD::runCCSD()
 {
     memoryAllocation();
-    int iteration = 0;
+    vector<MatrixXd> error_DIIS, t1_DIIS, t2_DIIS;
     double d_t1 = 10, d_t2 = 10, ene_new, de;
-    cout << endl << "Start CCSD iterations......" << endl;
-    while(max(d_t1,d_t2) >= convControl)
+    cout << endl;
+    cout << "###########################" << endl;
+    cout << "#  Start CCSD iterations  #" << endl;
+    cout << "###########################" << endl;
+    cout << endl;
+    for(int iteration = 1; iteration <= maxIter; iteration++)
     {
-        iteration++;
-        evaluate_tau();
-        evaluate_W_F();
-        evaluate_t1t2New();
-        ene_new = evaluate_ene_ccsd();
+        if(iteration <= 2)
+        {
+            evaluate_tau();
+            evaluate_W_F();
+            evaluate_t1t2New();
+        }
+        else
+        {
+            if(iteration == 3)
+            {
+                cout << endl;
+                cout << "###########################" << endl;
+                cout << "#       Start DIIS        #" << endl;
+                cout << "###########################" << endl;
+                cout << endl;
+            } 
+            int tmp_size = error_DIIS.size();
+            MatrixXd B4DIIS(tmp_size+1,tmp_size+1);
+            VectorXd vec_b(tmp_size+1);
+            for(int ii = 0; ii < tmp_size; ii++)
+            {    
+                for(int jj = 0; jj <= ii; jj++)
+                {
+                    B4DIIS(ii,jj) = (error_DIIS[ii].adjoint()*error_DIIS[jj])(0,0);
+                    B4DIIS(jj,ii) = B4DIIS(ii,jj);
+                }
+                B4DIIS(tmp_size, ii) = -1.0;
+                B4DIIS(ii, tmp_size) = -1.0;
+                vec_b(ii) = 0.0;
+            }
+            B4DIIS(tmp_size, tmp_size) = 0.0;
+            vec_b(tmp_size) = -1.0;
+            VectorXd C = B4DIIS.partialPivLu().solve(vec_b);
+            t1 = MatrixXd::Zero(t1.rows(),t1.cols());
+            t2 = MatrixXd::Zero(t2.rows(),t2.cols());
+            for(int ii = 0; ii < tmp_size; ii++)
+            {
+                t1 += C(ii) * t1_DIIS[ii];
+                t2 += C(ii) * t2_DIIS[ii];
+            }
+            evaluate_tau();
+            evaluate_W_F();
+            evaluate_t1t2New();
+        }
         d_t1 = evaluateChange(t1,t1_new);
         d_t2 = evaluateChange(t2,t2_new);
+        t1 = t1_new;
+        t2 = t2_new;
+        ene_new = evaluate_ene_ccsd();
         de = ene_new - ene_ccsd;
         cout << "Iter " << iteration << " :\n";
         cout << "E(ccsd)         \td_t1            \td_t2            \tde              \n";
         cout << setprecision(16) << ene_new << "\t" << d_t1 << "\t" << d_t2 << "\t" << de << "\n";
-        t1 = t1_new;
-        t2 = t2_new;
         ene_ccsd = ene_new;
-    }
-    converged = true;
-    cout << endl << "CCSD converges after " << iteration << " iterations." << endl;
-    cout << "Final CCSD energy is " << setprecision(16) << ene_ccsd << " hartree." << endl;
-    memoryDeallocation();
 
+        if(max(d_t1,d_t2) < convControl)
+        {
+            converged = true;
+            cout << endl << "CCSD converges after " << iteration << " iterations." << endl;
+            cout << "Final CCSD energy is " << setprecision(16) << ene_ccsd << " hartree." << endl;
+            memoryDeallocation();
+            break;
+        }
+
+        evaluate_tau();
+        evaluate_W_F();
+        evaluate_t1t2New();
+        if(error_DIIS.size() >= size_DIIS)
+        {
+            error_DIIS.erase(error_DIIS.begin());
+            error_DIIS.push_back(evaluateErrorDIIS(t1,t1_new,t2,t2_new));
+            t1_DIIS.erase(t1_DIIS.begin());
+            t1_DIIS.push_back(t1_new);
+            t2_DIIS.erase(t2_DIIS.begin());
+            t2_DIIS.push_back(t2_new);
+        }
+        else
+        {
+            error_DIIS.push_back(evaluateErrorDIIS(t1,t1_new,t2,t2_new));
+            t1_DIIS.push_back(t1_new);
+            t2_DIIS.push_back(t2_new);
+        }
+    }
+    if(!converged)
+    {
+        cout << "ERROR: CCSD did NOT converge!" << endl;
+        exit(99);
+    }
+    
     return;
 }
 

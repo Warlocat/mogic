@@ -25,9 +25,11 @@ protected:
     static double evaluateChange(const MatrixXd& M1, const MatrixXd& M2);
     double evaluate_ene_ccsd();
 
+    static MatrixXd evaluateErrorDIIS(const MatrixXd& t1_old, const MatrixXd& t1_new, const MatrixXd& t2_old, const MatrixXd& t2_new);
+
 public:
     bool converged = false;
-    int maxIter = 200;
+    int maxIter = 150, size_DIIS = 8;
     double ene_ccsd, ene_pT, convControl = 1e-12;
 
     CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_mo_so_, const VectorXd& ene_mo_);
