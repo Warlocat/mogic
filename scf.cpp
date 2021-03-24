@@ -3,6 +3,7 @@
 #include<iostream>
 #include<iomanip>
 #include<fstream>
+#include<vector>
 
 SCF::SCF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_):
 nelec_a(mol_.nelec_a), nelec_b(mol_.nelec_b), size_basis(s_.rows()), overlap(s_), h1e(t_+v_), h2e(eri_), V_RR(V_RR_)
@@ -38,6 +39,21 @@ nelec_a(nelec_a_), nelec_b(nelec_b_), size_basis(size_basis_)
 SCF::~SCF()
 {
 }
+
+
+MatrixXd SCF::evaluateErrorDIIS(const MatrixXd fock_, const MatrixXd density_)
+{
+    MatrixXd tmp = fock_*density_*overlap - overlap*density_*fock_;
+    MatrixXd err(size_basis*size_basis,1);
+    for(int ii = 0; ii < size_basis; ii++)
+    for(int jj = 0; jj < size_basis; jj++)
+    {
+        err(ii*size_basis+jj) = tmp(ii,jj);
+    }
+    return err;
+}
+
+
 
 
 void SCF::readIntegrals_1e(MatrixXd& int_1e, const string& filename)
@@ -219,6 +235,7 @@ RHF::~RHF()
 
 void RHF::runSCF()
 {
+    vector<MatrixXd> error4DIIS, fock4DIIS;
     fock.resize(size_basis,size_basis);
 
     MatrixXd newDen;
@@ -227,29 +244,68 @@ void RHF::runSCF()
 
     for(int iter = 1; iter <= maxIter; iter++)
     {
-        #pragma omp parallel  for
-        for(int mm = 0; mm < size_basis; mm++)
-        for(int nn = 0; nn <= mm; nn++)
+        if(iter <= 2)
         {
-            fock(mm,nn) = h1e(mm,nn);
-            for(int aa = 0; aa < size_basis; aa++)
-            for(int bb = 0; bb < size_basis; bb++)
+            #pragma omp parallel  for
+            for(int mm = 0; mm < size_basis; mm++)
+            for(int nn = 0; nn <= mm; nn++)
             {
-                int ab, mn, an, mb, abmn, anmb;
-                ab = max(aa,bb)*(max(aa,bb)+1)/2 + min(aa,bb);
-                mn = max(mm,nn)*(max(mm,nn)+1)/2 + min(mm,nn);
-                an = max(aa,nn)*(max(aa,nn)+1)/2 + min(aa,nn);
-                mb = max(mm,bb)*(max(mm,bb)+1)/2 + min(mm,bb);
-                abmn = max(ab,mn)*(max(ab,mn)+1)/2 + min(ab,mn);
-                anmb = max(an,mb)*(max(an,mb)+1)/2 + min(an,mb);
-                fock(mm,nn) += density(aa,bb) * (2.0 * h2e(abmn) - h2e(anmb));
+                fock(mm,nn) = h1e(mm,nn);
+                for(int aa = 0; aa < size_basis; aa++)
+                for(int bb = 0; bb < size_basis; bb++)
+                {
+                    int ab, mn, an, mb, abmn, anmb;
+                    ab = max(aa,bb)*(max(aa,bb)+1)/2 + min(aa,bb);
+                    mn = max(mm,nn)*(max(mm,nn)+1)/2 + min(mm,nn);
+                    an = max(aa,nn)*(max(aa,nn)+1)/2 + min(aa,nn);
+                    mb = max(mm,bb)*(max(mm,bb)+1)/2 + min(mm,bb);
+                    abmn = max(ab,mn)*(max(ab,mn)+1)/2 + min(ab,mn);
+                    anmb = max(an,mb)*(max(an,mb)+1)/2 + min(an,mb);
+                    fock(mm,nn) += density(aa,bb) * (2.0 * h2e(abmn) - h2e(anmb));
+                }
+                fock(nn,mm) = fock(mm,nn);
             }
-            fock(nn,mm) = fock(mm,nn);
         }
-
+        else
+        {
+            int tmp_size = fock4DIIS.size();
+            MatrixXd B4DIIS(tmp_size+1,tmp_size+1);
+            VectorXd vec_b(tmp_size+1);
+            for(int ii = 0; ii < tmp_size; ii++)
+            {    
+                for(int jj = 0; jj <= ii; jj++)
+                {
+                    B4DIIS(ii,jj) = (error4DIIS[ii].adjoint()*error4DIIS[jj])(0,0);
+                    B4DIIS(jj,ii) = B4DIIS(ii,jj);
+                }
+                B4DIIS(tmp_size, ii) = -1.0;
+                B4DIIS(ii, tmp_size) = -1.0;
+                vec_b(ii) = 0.0;
+            }
+            B4DIIS(tmp_size, tmp_size) = 0.0;
+            vec_b(tmp_size) = -1.0;
+            VectorXd C = B4DIIS.partialPivLu().solve(vec_b);
+            fock = MatrixXd::Zero(size_basis,size_basis);
+            for(int ii = 0; ii < tmp_size; ii++)
+            {
+                fock += C(ii) * fock4DIIS[ii];
+            }
+        }
         eigensolverG(fock, overlap_half_i, ene_orb, coeff);
         // newDen = 0.5*(evaluateDensity(coeff, nelec_a) + density);
         newDen = evaluateDensity(coeff, nelec_a);
+        if(error4DIIS.size() >= size_DIIS)
+        {
+            error4DIIS.erase(error4DIIS.begin());
+            error4DIIS.push_back(evaluateErrorDIIS(fock,newDen));
+            fock4DIIS.erase(fock4DIIS.begin());
+            fock4DIIS.push_back(fock);
+        }
+        else
+        {
+            error4DIIS.push_back(evaluateErrorDIIS(fock,newDen));
+            fock4DIIS.push_back(fock);
+        }
         d_density = evaluateChange(density, newDen);
         cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
         
@@ -275,6 +331,11 @@ void RHF::runSCF()
             cout << "Final RHF energy is " << setprecision(15) << ene_scf << " hartree." << endl;
             break;            
         }           
+    }
+    if(!converged)
+    {
+        cout << "ERROR: SCF did NOT converge!" << endl;
+        exit(99);
     }
 }
 
@@ -375,6 +436,11 @@ void UHF::runSCF()
             cout << "Final UHF energy is " << setprecision(15) << ene_scf << " hartree." << endl;
             break;            
         }           
+    }
+    if(!converged)
+    {
+        cout << "ERROR: SCF did NOT converge!" << endl;
+        exit(99);
     }
 }
 

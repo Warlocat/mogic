@@ -6,12 +6,10 @@
 #include"molint.h"
 #include"scf.h"
 #include"ccsd.h"
+#include"intTrans.h"
 using namespace std;
 using namespace Eigen;
 
-VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, const string alg = "smart");
-VectorXd integralTransfermation_spatial2spin(const VectorXd& h2e_mo, const int& size_basis);
-double get_energy_MP2(const VectorXd& h2e_mo, const VectorXd& ene_mo, const int& nelec_a, const int& nelec_b);
 
 int main()
 {

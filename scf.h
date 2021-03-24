@@ -17,6 +17,8 @@ protected:
     MatrixXd overlap, overlap_half_i, h1e;
     VectorXd h2e;
 
+    MatrixXd evaluateErrorDIIS(const MatrixXd fock_, const MatrixXd density_);
+
     static void readIntegrals_1e(MatrixXd& int_1e, const string& filename);
     static void readIntegrals_2e(VectorXd& int_2e, const string& filename);
     static double evaluateChange(const MatrixXd& M1, const MatrixXd& M2);
@@ -27,7 +29,7 @@ protected:
 
 public:
     bool converged = false;
-    int maxIter = 200;
+    int maxIter = 200, size_DIIS = 6;
     double ene_scf, convControl = 1e-12;
 
     SCF(const MOL& mol_, const MatrixXd& s_, const MatrixXd& t_, const MatrixXd& v_, const VectorXd& eri_, const double& V_RR_);

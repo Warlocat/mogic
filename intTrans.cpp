@@ -75,6 +75,7 @@ VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, c
                 h2e_tmp2(ab,kl) += coeff(cc,kk) * h2e_tmp1(ab,cl);
             }
         }
+        h2e_tmp1.resize(0,0);
 
         for(int aa = 0; aa < coeff.rows(); aa++)
         for(int jj = 0; jj < coeff.rows(); jj++)
@@ -89,6 +90,7 @@ VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, c
                 h2e_tmp3(aj,kl) += coeff(bb,jj) * h2e_tmp2(ab,kl);
             }
         }
+        h2e_tmp2.resize(0,0);
 
         for(int ii = 0; ii < coeff.rows(); ii++)
         for(int jj = 0; jj <= ii; jj++)
@@ -108,6 +110,7 @@ VectorXd integralTransfermation(const VectorXd& h2e_ao, const MatrixXd& coeff, c
                 }
             }
         }
+        h2e_tmp3.resize(0,0);
     }
     else
     {
