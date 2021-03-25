@@ -189,12 +189,12 @@ MatrixXd CCSD::evaluateErrorDIIS(const MatrixXd& t1_old, const MatrixXd& t1_new,
     for(int ii = 0; ii < t1_old.rows(); ii++)
     for(int jj = 0; jj < t1_old.cols(); jj++)
     {
-        err(ii*t1_old.rows() + jj) = t1_new(ii,jj) - t1_old(ii,jj);
+        err(ii*t1_old.cols() + jj,0) = t1_new(ii,jj) - t1_old(ii,jj);
     }
     for(int ii = 0; ii < t2_old.rows(); ii++)
     for(int jj = 0; jj < t2_old.cols(); jj++)
     {
-        err(t1_old.rows()*t1_old.cols() + ii*t2_old.rows() + jj) = t2_new(ii,jj) - t2_old(ii,jj);
+        err(t1_old.rows()*t1_old.cols() + ii*t2_old.cols() + jj,0) = t2_new(ii,jj) - t2_old(ii,jj);
     }
     return err;
 }
@@ -377,10 +377,9 @@ void CCSD::evaluate_t1t2New()
 
 double CCSD::evaluateChange(const MatrixXd& M1, const MatrixXd& M2)
 {
-    int size = M1.rows();
     double tmp = 0.0;
-    for(int ii = 0; ii < size; ii++)
-    for(int jj = 0; jj < size; jj++)
+    for(int ii = 0; ii < M1.rows(); ii++)
+    for(int jj = 0; jj < M1.cols(); jj++)
         tmp += pow((M1(ii,jj) - M2(ii,jj)),2);
 
     return sqrt(tmp);

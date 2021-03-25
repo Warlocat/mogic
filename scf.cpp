@@ -48,7 +48,7 @@ MatrixXd SCF::evaluateErrorDIIS(const MatrixXd& fock_, const MatrixXd& density_)
     for(int ii = 0; ii < size_basis; ii++)
     for(int jj = 0; jj < size_basis; jj++)
     {
-        err(ii*size_basis+jj) = tmp(ii,jj);
+        err(ii*size_basis+jj,0) = tmp(ii,jj);
     }
     return err;
 }

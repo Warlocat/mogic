@@ -30,7 +30,7 @@ protected:
 public:
     bool converged = false;
     int maxIter = 150, size_DIIS = 8;
-    double ene_ccsd, ene_pT, convControl = 1e-12;
+    double ene_ccsd, ene_pT, convControl = 1e-10;
 
     CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_mo_so_, const VectorXd& ene_mo_);
     virtual ~CCSD();
