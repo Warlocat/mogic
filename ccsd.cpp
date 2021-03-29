@@ -5,12 +5,16 @@
 #include<fstream>
 #include<vector>
 
-CCSD::CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_mo_so_, const VectorXd& ene_mo_):
-n_occ(n_occ_), n_vir(n_vir_), h2e_mo_so(h2e_mo_so_)
+
+/*
+    Constructor for RHF
+*/
+CCSD::CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_so_antiSym_, const VectorXd& ene_mo_):
+n_occ(n_occ_), n_vir(n_vir_), h2e_so_antiSym(h2e_so_antiSym_)
 {
-    ene_mo_so.resize(n_occ+n_vir);
+    ene_so.resize(n_occ+n_vir);
     for(int ii = 0; ii < n_occ+n_vir; ii++)
-        ene_mo_so(ii) = ene_mo_(ii/2);
+        ene_so(ii) = ene_mo_(ii/2);
     t1.resize(n_occ, n_vir);
     t2.resize(n_occ*n_occ, n_vir*n_vir);
     t1_new.resize(n_occ, n_vir);
@@ -23,11 +27,59 @@ n_occ(n_occ_), n_vir(n_vir_), h2e_mo_so(h2e_mo_so_)
     for(int aa = n_occ; aa < n_occ + n_vir; aa++)
     {   
         t1(ii,aa-n_occ) = 0.0;
-        D1(ii,aa-n_occ) = ene_mo_so(ii) - ene_mo_so(aa);
+        D1(ii,aa-n_occ) = ene_so(ii) - ene_so(aa);
         for(int jj = 0; jj < n_occ; jj++)
         for(int bb = n_occ; bb < n_occ + n_vir; bb++)
         {
-            D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = ene_mo_so(ii)+ene_mo_so(jj)-ene_mo_so(aa)-ene_mo_so(bb);
+            D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = ene_so(ii)+ene_so(jj)-ene_so(aa)-ene_so(bb);
+            t2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = h2e_dirac_so(ii,jj,aa,bb)
+                                                        / D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ);
+            ene_mp2 += 0.25*h2e_dirac_so(ii,jj,aa,bb)*t2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ);
+        }
+    }
+
+    cout << "MP2 energy from CCSD initialization: " << ene_mp2 << endl;
+}
+
+/*
+    Constructor for UHF
+*/
+CCSD::CCSD(const int& n_occ_, const int& n_vir_, const VectorXd& h2e_so_antiSym_, const VectorXd& ene_mo_a, const VectorXd& ene_mo_b):
+n_occ(n_occ_), n_vir(n_vir_), h2e_so_antiSym(h2e_so_antiSym_)
+{
+    cout << endl;
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    cout << "! CAUTION: CCSD from UHF is only correct when the system has the same number for alpha and beta electrons. !" << endl;
+    cout << "!          This module has NOT been finished.                                                              !" << endl;
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    cout << endl;
+    exit(99);
+
+    ene_so.resize(n_occ+n_vir);
+    for(int ii = 0; ii < n_occ+n_vir; ii++)
+    {
+        if(ii%2 == 0)    
+            ene_so(ii) = ene_mo_a(ii/2);
+        else
+            ene_so(ii) = ene_mo_b(ii/2);
+    }
+    t1.resize(n_occ, n_vir);
+    t2.resize(n_occ*n_occ, n_vir*n_vir);
+    t1_new.resize(n_occ, n_vir);
+    t2_new.resize(n_occ*n_occ, n_vir*n_vir);
+    D1.resize(n_occ, n_vir);
+    D2.resize(n_occ*n_occ, n_vir*n_vir);
+
+    double ene_mp2 = 0.0;
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int aa = n_occ; aa < n_occ + n_vir; aa++)
+    {   
+        t1(ii,aa-n_occ) = 0.0;
+        D1(ii,aa-n_occ) = ene_so(ii) - ene_so(aa);
+        for(int jj = 0; jj < n_occ; jj++)
+        for(int bb = n_occ; bb < n_occ + n_vir; bb++)
+        {
+            D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = ene_so(ii)+ene_so(jj)-ene_so(aa)-ene_so(bb);
             t2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = h2e_dirac_so(ii,jj,aa,bb)
                                                         / D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ);
             ene_mp2 += 0.25*h2e_dirac_so(ii,jj,aa,bb)*t2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ);
@@ -44,10 +96,12 @@ CCSD::~CCSD()
 
 inline double CCSD::h2e_dirac_so(const int& ii, const int& jj, const int& kk, const int& ll)
 {
-    int ik = max(ii,kk)*(max(ii,kk)+1)/2+min(ii,kk), il = max(ii,ll)*(max(ii,ll)+1)/2+min(ii,ll);
-    int jk = max(jj,kk)*(max(jj,kk)+1)/2+min(jj,kk), jl = max(jj,ll)*(max(jj,ll)+1)/2+min(jj,ll);
-    int ikjl = max(ik,jl)*(max(ik,jl)+1)/2+min(ik,jl), iljk=max(il,jk)*(max(il,jk)+1)/2+min(il,jk);
-    return h2e_mo_so(ikjl) - h2e_mo_so(iljk);
+    int sign = 1;
+    if(ii < jj) sign *= -1;
+    if(kk < ll) sign *= -1;
+    int ij = max(ii,jj)*(max(ii,jj)+1)/2+min(ii,jj), kl = max(kk,ll)*(max(kk,ll)+1)/2+min(kk,ll);
+    int ijkl = max(ij,kl)*(max(ij,kl)+1)/2+min(ij,kl);
+    return sign * h2e_so_antiSym(ijkl);
 }
 
 
@@ -520,8 +574,8 @@ void CCSD::runCCSD_pT()
     for(int bb = 0; bb < n_vir; bb++)
     for(int cc = 0; cc < n_vir; cc++)
     {
-        D3[ii][jj][kk][aa][bb][cc] = ene_mo_so(ii) + ene_mo_so(jj) + ene_mo_so(kk)
-                                    - ene_mo_so(aa + n_occ) - ene_mo_so(bb + n_occ) - ene_mo_so(cc + n_occ);
+        D3[ii][jj][kk][aa][bb][cc] = ene_so(ii) + ene_so(jj) + ene_so(kk)
+                                    - ene_so(aa + n_occ) - ene_so(bb + n_occ) - ene_so(cc + n_occ);
         tmp_d[ii][jj][kk][aa][bb][cc] = t1(ii,aa) * h2e_dirac_so(jj,kk,bb+n_occ,cc+n_occ);
         tmp_c[ii][jj][kk][aa][bb][cc] = 0.0;
         for(int ee = 0; ee < n_vir; ee++)

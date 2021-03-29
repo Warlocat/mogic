@@ -13,21 +13,15 @@ using namespace Eigen;
 
 
 int main()
-{
+{ 
     MOL mol_test;
-    mol_test.readxyz("h2o.xyz");
+    mol_test.readxyz("geom.dat");
     mol_test.readInput("inputFile");
     MOLINT molint_test(mol_test,false);
-    MatrixXd int1e_s = molint_test.get_h1e("overlap");
-    MatrixXd int1e_t = molint_test.get_h1e("kinetic");
-    MatrixXd int1e_v = molint_test.get_h1e("nucV");
-    VectorXd int2e_eri = molint_test.get_h2e("eriLLLL");
-    double e_nuc = molint_test.get_V_RR();
-    int size_basis = int1e_s.rows();
-    
-    RHF rhf_test(mol_test, int1e_s, int1e_t, int1e_v, int2e_eri, e_nuc);
+    RHF rhf_test(mol_test.nelec_a,mol_test.nelec_b,molint_test.Nbasis_con);
+    int size_basis = molint_test.Nbasis_con;
     rhf_test.runSCF();
-    VectorXd int2e_eri_so_antiSym = integralTransfermation_SO_antiSym(int2e_eri, rhf_test.coeff);
+    VectorXd int2e_eri_so_antiSym = integralTransfermation_SO_antiSym(rhf_test.get_h2e_vector(), rhf_test.coeff);
     CIS cis_test(mol_test.nelec, size_basis*2 - mol_test.nelec, int2e_eri_so_antiSym, rhf_test.ene_orb);
     // CCSD ccsd_test(mol_test.nelec, size_basis*2 - mol_test.nelec, int2e_eri_so_antiSym, rhf_test.ene_orb);
 
@@ -41,7 +35,6 @@ int main()
     // ccsd_test.runCCSD_pT();
 
     cis_test.runCIS("explicit");
-    // cis_test.runTDHF("explicit");
     cout << 27.2114*cis_test.ene_CIS << endl;
 
     return 0;

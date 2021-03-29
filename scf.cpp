@@ -297,6 +297,27 @@ void RHF::runSCF()
         d_density = evaluateChange(density, newDen);
         cout << "Iter #" << iter << " maximum density difference: " << d_density << endl;
         density = newDen;
+        if(d_density < convControl) 
+        {
+            converged = true;
+            cout << endl << "RHF converges after " << iter << " iterations." << endl << endl;
+
+            cout << "\tOrbital\t\tEnergy(in hartree)\n";
+            cout << "\t*******\t\t******************\n";
+            for(int ii = 1; ii <= size_basis; ii++)
+            {
+                cout << "\t" << ii << "\t\t" << setprecision(15) << ene_orb(ii - 1) << endl;
+            }
+
+            ene_scf = V_RR;
+            for(int ii = 0; ii < size_basis; ii++)
+            for(int jj = 0; jj < size_basis; jj++)
+            {
+                ene_scf += density(ii,jj) * (h1e(jj,ii) + fock(jj,ii));
+            }
+            cout << "Final RHF energy is " << setprecision(15) << ene_scf << " hartree." << endl;
+            break;            
+        }   
         #pragma omp parallel  for
         for(int mm = 0; mm < size_basis; mm++)
         for(int nn = 0; nn <= mm; nn++)
@@ -327,29 +348,7 @@ void RHF::runSCF()
         {
             error4DIIS.push_back(evaluateErrorDIIS(fock,density));
             fock4DIIS.push_back(fock);
-        }
-        
-        if(d_density < convControl) 
-        {
-            converged = true;
-            cout << endl << "RHF converges after " << iter << " iterations." << endl << endl;
-
-            cout << "\tOrbital\t\tEnergy(in hartree)\n";
-            cout << "\t*******\t\t******************\n";
-            for(int ii = 1; ii <= size_basis; ii++)
-            {
-                cout << "\t" << ii << "\t\t" << setprecision(15) << ene_orb(ii - 1) << endl;
-            }
-
-            ene_scf = V_RR;
-            for(int ii = 0; ii < size_basis; ii++)
-            for(int jj = 0; jj < size_basis; jj++)
-            {
-                ene_scf += density(ii,jj) * (h1e(jj,ii) + fock(jj,ii));
-            }
-            cout << "Final RHF energy is " << setprecision(15) << ene_scf << " hartree." << endl;
-            break;            
-        }           
+        }        
     }
     if(!converged)
     {
@@ -467,6 +466,27 @@ void UHF::runSCF()
         density_a = newDen_a;
         density_b = newDen_b;
         density_total = density_a + density_b;
+        if(max(d_density_a,d_density_b) < convControl) 
+        {
+            converged = true;
+            cout << endl << "UHF converges after " << iter << " iterations." << endl << endl;
+
+            cout << "\tOrbital\t\tEnergy_a(in hartree)\t\tEnergy_b(in hartree)\n";
+            cout << "\t*******\t\t********************\t\t********************\n";
+            for(int ii = 1; ii <= size_basis; ii++)
+            {
+                cout << "\t" << ii << "\t\t" << setprecision(15) << ene_orb_a(ii - 1) << "\t\t" << ene_orb_b(ii - 1) << endl;
+            }
+
+            ene_scf = V_RR;
+            for(int ii = 0; ii < size_basis; ii++)
+            for(int jj = 0; jj < size_basis; jj++)
+            {
+                ene_scf += 0.5 * (density_total(ii,jj) * h1e(jj,ii) + density_a(ii,jj) * fock_a(jj,ii) + density_b(ii,jj) * fock_b(jj,ii));
+            }
+            cout << "Final UHF energy is " << setprecision(15) << ene_scf << " hartree." << endl;
+            break;            
+        }    
         #pragma omp parallel  for
         for(int mm = 0; mm < size_basis; mm++)
         for(int nn = 0; nn < size_basis; nn++)
@@ -505,34 +525,7 @@ void UHF::runSCF()
             fock_a4DIIS.push_back(fock_a);
             error_b4DIIS.push_back(evaluateErrorDIIS(fock_b,density_b));
             fock_b4DIIS.push_back(fock_b);
-        }
-
-
-
-
-        
-        
-        if(max(d_density_a,d_density_b) < convControl) 
-        {
-            converged = true;
-            cout << endl << "UHF converges after " << iter << " iterations." << endl << endl;
-
-            cout << "\tOrbital\t\tEnergy_a(in hartree)\t\tEnergy_b(in hartree)\n";
-            cout << "\t*******\t\t********************\t\t********************\n";
-            for(int ii = 1; ii <= size_basis; ii++)
-            {
-                cout << "\t" << ii << "\t\t" << setprecision(15) << ene_orb_a(ii - 1) << "\t\t" << ene_orb_b(ii - 1) << endl;
-            }
-
-            ene_scf = V_RR;
-            for(int ii = 0; ii < size_basis; ii++)
-            for(int jj = 0; jj < size_basis; jj++)
-            {
-                ene_scf += 0.5 * (density_total(ii,jj) * h1e(jj,ii) + density_a(ii,jj) * fock_a(jj,ii) + density_b(ii,jj) * fock_b(jj,ii));
-            }
-            cout << "Final UHF energy is " << setprecision(15) << ene_scf << " hartree." << endl;
-            break;            
-        }           
+        }       
     }
     if(!converged)
     {
