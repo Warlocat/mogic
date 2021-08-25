@@ -8,6 +8,9 @@ MAIN = main.o mol.o scf.o ccsd.o molint.o intTrans.o
 test.exe: ${MAIN}
 	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} -I ${TBLIS}/include -L ${GSL}/.libs -l gsl -L ${TBLIS}/lib -l tblis ${MAIN} -o test.exe 
 
+check.exe: ${CHECK}
+	${CPP} ${CPPFLAG} -I ${EIGEN} -I ${GSL} -L ${GSL}/.libs -l gsl ${CHECK} -o check.exe 
+
 
 %.o: %.cpp
 	$(CPP) $(CPPFLAG) -c $< -o $@ -I ${EIGEN} -I ${GSL} -I ${TBLIS}/include  
