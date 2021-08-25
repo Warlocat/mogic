@@ -11,12 +11,12 @@ n_occ(n_occ_), n_vir(n_vir_), h2e_mo_so(h2e_mo_so_)
     ene_mo_so.resize(n_occ+n_vir);
     for(int ii = 0; ii < n_occ+n_vir; ii++)
         ene_mo_so(ii) = ene_mo_(ii/2);
-    t1.resize(n_occ, n_vir);
-    t2.resize(n_occ*n_occ, n_vir*n_vir);
-    t1_new.resize(n_occ, n_vir);
-    t2_new.resize(n_occ*n_occ, n_vir*n_vir);
-    D1.resize(n_occ, n_vir);
-    D2.resize(n_occ*n_occ, n_vir*n_vir);
+    t1.reset({n_occ, n_vir},0.0);
+    t2.reset({n_occ,n_occ,n_vir,n_vir},0.0);
+    t1_new.reset({n_occ, n_vir},0.0);
+    t2_new.reset({n_occ,n_occ,n_vir,n_vir},0.0);
+    D1.reset({n_occ, n_vir},0.0);
+    D2.reset({n_occ,n_occ,n_vir,n_vir},0.0);
 
     double ene_mp2 = 0.0;
     for(int ii = 0; ii < n_occ; ii++)
@@ -27,10 +27,9 @@ n_occ(n_occ_), n_vir(n_vir_), h2e_mo_so(h2e_mo_so_)
         for(int jj = 0; jj < n_occ; jj++)
         for(int bb = n_occ; bb < n_occ + n_vir; bb++)
         {
-            D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = ene_mo_so(ii)+ene_mo_so(jj)-ene_mo_so(aa)-ene_mo_so(bb);
-            t2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ) = h2e_dirac_so(ii,jj,aa,bb)
-                                                        / D2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ);
-            ene_mp2 += 0.25*h2e_dirac_so(ii,jj,aa,bb)*t2(ii*n_occ+jj, (aa-n_occ)*n_vir+bb-n_occ);
+            D2(ii,jj,aa-n_occ,bb-n_occ) = ene_mo_so(ii)+ene_mo_so(jj)-ene_mo_so(aa)-ene_mo_so(bb);
+            t2(ii,jj,aa-n_occ,bb-n_occ) = h2e_dirac_so(ii,jj,aa,bb) / D2(ii,jj,aa-n_occ,bb-n_occ);
+            ene_mp2 += 0.25*h2e_dirac_so(ii,jj,aa,bb)*t2(ii,jj,aa-n_occ,bb-n_occ);
         }
     }
 
@@ -53,335 +52,201 @@ inline double CCSD::h2e_dirac_so(const int& ii, const int& jj, const int& kk, co
 
 void CCSD::memoryAllocation()
 {
-    double size = (pow(n_occ,2)*pow(n_vir,2)*5 + pow(n_occ,4) + pow(n_vir,4) + pow(n_occ,2)*pow(n_vir,2) + n_vir*n_vir + n_occ*n_occ + n_vir*n_occ + n_occ*n_vir*3) * sizeof(double) / 1024.0 / 1024.0 * (size_DIIS + 1);
+    double size = (pow(n_occ,2)*pow(n_vir,2)*8 + pow(n_occ,4)*2 + pow(n_vir,4)*2 + pow(n_occ,1)*pow(n_vir,3) + pow(n_occ,3)*pow(n_vir,1) + n_vir*n_vir + n_occ*n_occ + n_vir*n_occ + n_occ*n_vir*3) * sizeof(double) / 1024.0 / 1024.0 * (size_DIIS + 1);
 
-    cout << "Memory requirement: " << size << " MB.\n";
+    cout << endl << endl << "CCSD memory requirement: " << size << " MB.\n";
 
-    tau = new double***[n_occ];
-    tau_tilde = new double***[n_occ];
+    tau.reset({n_occ,n_occ,n_vir,n_vir},0.0);
+    tau_tilde.reset({n_occ,n_occ,n_vir,n_vir},0.0);
+    W_oooo.reset({n_occ,n_occ,n_occ,n_occ},0.0);
+    W_vvvv.reset({n_vir,n_vir,n_vir,n_vir},0.0);
+    W_ovvo.reset({n_occ,n_vir,n_vir,n_occ},0.0);
+
+    F_vv.reset({n_vir,n_vir},0.0);
+    F_oo.reset({n_occ,n_occ},0.0);
+    F_ov.reset({n_occ,n_vir},0.0);
+
+    h2e_oooo.reset({n_occ,n_occ,n_occ,n_occ},0.0);
+    h2e_ooov.reset({n_occ,n_occ,n_occ,n_vir},0.0);
+    h2e_oovv.reset({n_occ,n_occ,n_vir,n_vir},0.0);
+    h2e_ovvo.reset({n_occ,n_vir,n_vir,n_occ},0.0);
+    h2e_ovvv.reset({n_occ,n_vir,n_vir,n_vir},0.0);
+    h2e_vvvv.reset({n_vir,n_vir,n_vir,n_vir},0.0);
     for(int ii = 0; ii < n_occ; ii++)
-    {   
-        tau[ii] = new double**[n_occ];
-        tau_tilde[ii] = new double**[n_occ];
-        for(int jj = 0; jj < n_occ; jj++)
-        {
-            tau[ii][jj] = new double*[n_vir];
-            tau_tilde[ii][jj] = new double*[n_vir];
-            for(int aa = 0; aa < n_vir; aa++)
-            {
-                tau[ii][jj][aa] = new double[n_vir];
-                tau_tilde[ii][jj][aa] = new double[n_vir];
-            }
-        }
-    }
-
-    W_oooo = new double***[n_occ];
-    for(int mm = 0; mm < n_occ; mm++)
-    {
-        W_oooo[mm] = new double**[n_occ];
-        for(int nn = 0; nn < n_occ; nn++)
-        {
-            W_oooo[mm][nn] = new double*[n_occ];
-            for(int ii = 0; ii < n_occ; ii++)
-                W_oooo[mm][nn][ii] = new double[n_occ];
-        }
-    }
-    W_vvvv = new double***[n_vir];
-    for(int aa = 0; aa < n_vir; aa++)
-    {
-        W_vvvv[aa] = new double**[n_vir];
-        for(int bb = 0; bb < n_vir; bb++)
-        {
-            W_vvvv[aa][bb] = new double*[n_vir];
-            for(int ee = 0; ee < n_vir; ee++)
-                W_vvvv[aa][bb][ee] = new double[n_vir];
-        }
-    }
-    W_ovvo = new double***[n_occ];
-    for(int mm = 0; mm < n_occ; mm++)
-    {
-        W_ovvo[mm] = new double**[n_vir];
-        for(int bb = 0; bb < n_vir; bb++)
-        {
-            W_ovvo[mm][bb] = new double*[n_vir];
-            for(int ee = 0; ee < n_vir; ee++)
-                W_ovvo[mm][bb][ee] = new double[n_occ];
-        }
-    }
-
-    F_vv = new double*[n_vir];
-    for(int aa = 0; aa < n_vir; aa++)
-        F_vv[aa] = new double[n_vir];
-    F_oo = new double*[n_occ];
-    for(int mm = 0; mm < n_occ; mm++)
-        F_oo[mm] = new double[n_occ];
-    F_ov = new double*[n_occ];
-    for(int mm = 0; mm < n_occ; mm++)
-        F_ov[mm] = new double[n_vir];
+    for(int jj = 0; jj < n_occ; jj++)
+    for(int kk = 0; kk < n_occ; kk++)
+    for(int ll = 0; ll < n_occ; ll++)
+        h2e_oooo(ii,jj,kk,ll) = h2e_dirac_so(ii,jj,kk,ll);
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int jj = 0; jj < n_occ; jj++)
+    for(int kk = 0; kk < n_occ; kk++)
+    for(int ll = 0; ll < n_vir; ll++)
+        h2e_ooov(ii,jj,kk,ll) = h2e_dirac_so(ii,jj,kk,ll+n_occ);
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int jj = 0; jj < n_occ; jj++)
+    for(int kk = 0; kk < n_vir; kk++)
+    for(int ll = 0; ll < n_vir; ll++)
+        h2e_oovv(ii,jj,kk,ll) = h2e_dirac_so(ii,jj,kk+n_occ,ll+n_occ);
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int jj = 0; jj < n_vir; jj++)
+    for(int kk = 0; kk < n_vir; kk++)
+    for(int ll = 0; ll < n_occ; ll++)
+        h2e_ovvo(ii,jj,kk,ll) = h2e_dirac_so(ii,jj+n_occ,kk+n_occ,ll);
+    for(int ii = 0; ii < n_occ; ii++)
+    for(int jj = 0; jj < n_vir; jj++)
+    for(int kk = 0; kk < n_vir; kk++)
+    for(int ll = 0; ll < n_vir; ll++)
+        h2e_ovvv(ii,jj,kk,ll) = h2e_dirac_so(ii,jj+n_occ,kk+n_occ,ll+n_occ);
+    for(int ii = 0; ii < n_vir; ii++)
+    for(int jj = 0; jj < n_vir; jj++)
+    for(int kk = 0; kk < n_vir; kk++)
+    for(int ll = 0; ll < n_vir; ll++)
+        h2e_vvvv(ii,jj,kk,ll) = h2e_dirac_so(ii+n_occ,jj+n_occ,kk+n_occ,ll+n_occ);
 }
+
 void CCSD::memoryDeallocation()
 {
-    for(int ii = 0; ii < n_occ; ii++)
-    {   
-        for(int jj = 0; jj < n_occ; jj++)
-        {
-            for(int aa = n_occ; aa < n_vir; aa++)
-            {
-                delete[] tau[ii][jj][aa];
-                delete[] tau_tilde[ii][jj][aa];
-            }
-            delete[] tau[ii][jj];
-            delete[] tau_tilde[ii][jj];
-        }
-        delete[] tau[ii];
-        delete[] tau_tilde[ii];
-    }
-    delete[] tau;
-    delete[] tau_tilde;
-    for(int mm = 0; mm < n_occ; mm++)
-    {
-        for(int nn = 0; nn < n_occ; nn++)
-        {    
-            for(int ii = 0; ii < n_occ; ii++)
-                delete[] W_oooo[mm][nn][ii];
-            delete[] W_oooo[mm][nn];
-        }
-        delete[] W_oooo[mm];
-    }
-    delete[] W_oooo;    
-    for(int aa = 0; aa < n_vir; aa++)
-    {
-        for(int bb = 0; bb < n_vir; bb++)
-        {        
-            for(int ee = 0; ee < n_vir; ee++)
-                delete[] W_vvvv[aa][bb][ee];;
-            delete[]W_vvvv[aa][bb];
-        }
-        delete[] W_vvvv[aa];
-    }
-    delete[] W_vvvv;
-    for(int mm = 0; mm < n_occ; mm++)
-    {
-        for(int bb = 0; bb < n_vir; bb++)
-        {
-            for(int ee = 0; ee < n_vir; ee++)
-                delete[] W_ovvo[mm][bb][ee];
-            delete[] W_ovvo[mm][bb];
-        }
-        delete[] W_ovvo[mm];
-    }
-    delete[] W_ovvo;
-
-    for(int aa = 0; aa < n_vir; aa++)
-        delete[] F_vv[aa];
-    delete[] F_vv;
-    for(int mm = 0; mm < n_occ; mm++)
-        delete[] F_oo[mm];
-    delete[] F_oo;
-    for(int mm = 0; mm < n_occ; mm++)
-        delete[] F_ov[mm];
-    delete[] F_ov;
+    tau.reset();
+    tau_tilde.reset();
+    W_oooo.reset();
+    W_vvvv.reset();
+    W_ovvo.reset();
+    F_vv.reset();
+    F_oo.reset();
+    F_ov.reset();
+    h2e_oooo.reset();
+    h2e_ooov.reset();
+    h2e_oovv.reset();
+    h2e_ovvo.reset();
+    h2e_ovvv.reset();
+    h2e_vvvv.reset();
 }
 
-MatrixXd CCSD::evaluateErrorDIIS(const MatrixXd& t1_old, const MatrixXd& t1_new, const MatrixXd& t2_old, const MatrixXd& t2_new)
+tensor<double> CCSD::evaluateErrorDIIS(const tensor<double>& t1_old, const tensor<double>& t1_new, const tensor<double>& t2_old, const tensor<double>& t2_new)
 {
-    MatrixXd err(t1_old.rows()*t1_old.cols() + t2_old.rows()*t2_old.cols(),1);
-    for(int ii = 0; ii < t1_old.rows(); ii++)
-    for(int jj = 0; jj < t1_old.cols(); jj++)
+    tensor<double> err({t1_old.length(0)*t1_old.length(1) + t2_old.length(0)*t2_old.length(1)*t2_old.length(2)*t2_old.length(3)});
+    for(int ii = 0; ii < t1_old.length(0); ii++)
+    for(int jj = 0; jj < t1_old.length(1); jj++)
     {
-        err(ii*t1_old.cols() + jj,0) = t1_new(ii,jj) - t1_old(ii,jj);
+        err(ii*t1_old.length(1) + jj) = t1_new(ii,jj) - t1_old(ii,jj);
     }
-    for(int ii = 0; ii < t2_old.rows(); ii++)
-    for(int jj = 0; jj < t2_old.cols(); jj++)
+    for(int ii = 0; ii < t2_old.length(0); ii++)
+    for(int jj = 0; jj < t2_old.length(1); jj++)
+    for(int aa = 0; aa < t2_old.length(2); aa++)
+    for(int bb = 0; bb < t2_old.length(3); bb++)
     {
-        err(t1_old.rows()*t1_old.cols() + ii*t2_old.cols() + jj,0) = t2_new(ii,jj) - t2_old(ii,jj);
+        err(t1_old.length(0)*t1_old.length(1) + ii*t2_old.length(1)*t2_old.length(2)*t2_old.length(3) + jj*t2_old.length(2)*t2_old.length(3) + aa*t2_old.length(3) + bb) = t2_new(ii,jj,aa,bb) - t2_old(ii,jj,aa,bb);
     }
     return err;
 }
 
 void CCSD::evaluate_tau()
 {
-    for(int ii = 0; ii < n_occ; ii++)
-    for(int aa = 0; aa < n_vir; aa++)
-    for(int jj = 0; jj < n_occ; jj++)
-    for(int bb = 0; bb < n_vir; bb++)
-    {
-        tau[ii][jj][aa][bb] = t2(ii*n_occ+jj, aa*n_vir+bb)
-                                + t1(ii,aa)*t1(jj,bb) - t1(ii,bb)*t1(jj,aa);
-        tau_tilde[ii][jj][aa][bb] = t2(ii*n_occ+jj, aa*n_vir+bb)
-                                + 0.5*(t1(ii,aa)*t1(jj,bb) - t1(ii,bb)*t1(jj,aa));
-    }
-
+    tau = t2;
+    tau_tilde = t2;
+    mult<double>(1.0,t1,"ia",t1,"jb",1.0,tau,"ijab");
+    mult<double>(-1.0,t1,"ib",t1,"ja",1.0,tau,"ijab");
+    mult<double>(0.5,t1,"ia",t1,"jb",1.0,tau_tilde,"ijab");
+    mult<double>(-0.5,t1,"ib",t1,"ja",1.0,tau_tilde,"ijab");
     return;
 }
 
 void CCSD::evaluate_W_F()
 {
-    for(int mm = 0; mm < n_occ; mm++)
-    for(int nn = 0; nn < n_occ; nn++)
-    for(int ii = 0; ii < n_occ; ii++)
-    for(int jj = 0; jj < n_occ; jj++)
-    {
-        W_oooo[mm][nn][ii][jj] = h2e_dirac_so(mm,nn,ii,jj);
-        for(int ee = 0; ee < n_vir; ee++)        
-        {
-            W_oooo[mm][nn][ii][jj] += t1(jj,ee)*h2e_dirac_so(mm,nn,ii,ee+n_occ);
-            W_oooo[mm][nn][ii][jj] -= t1(ii,ee)*h2e_dirac_so(mm,nn,jj,ee+n_occ);
-            for(int ff = 0; ff < n_vir; ff++)
-            {
-                W_oooo[mm][nn][ii][jj] += 0.25*tau[ii][jj][ee][ff]*h2e_dirac_so(mm,nn,ee+n_occ,ff+n_occ);
-            }
-        }
-    }
-    for(int aa = 0; aa < n_vir; aa++)
-    for(int bb = 0; bb < n_vir; bb++)
-    for(int ee = 0; ee < n_vir; ee++)
-    for(int ff = 0; ff < n_vir; ff++)
-    {
-        W_vvvv[aa][bb][ee][ff] = h2e_dirac_so(aa+n_occ,bb+n_occ,ee+n_occ,ff+n_occ);
-        for(int mm = 0; mm < n_occ; mm++)
-        {
-            W_vvvv[aa][bb][ee][ff] -= t1(mm,bb)*h2e_dirac_so(n_occ+aa,mm,n_occ+ee,n_occ+ff); 
-            W_vvvv[aa][bb][ee][ff] += t1(mm,aa)*h2e_dirac_so(n_occ+bb,mm,n_occ+ee,n_occ+ff);
-            for(int nn = 0; nn < n_occ; nn++)
-                W_vvvv[aa][bb][ee][ff] += 0.25*tau[mm][nn][aa][bb]*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
-        }
-    }
-    for(int mm = 0; mm < n_occ; mm++)
-    for(int bb = 0; bb < n_vir; bb++)
-    for(int ee = 0; ee < n_vir; ee++)
-    for(int jj = 0; jj < n_occ; jj++)
-    {
-        W_ovvo[mm][bb][ee][jj] = h2e_dirac_so(mm,n_occ+bb,n_occ+ee,jj);
-        for(int ff = 0; ff < n_vir; ff++)
-        {
-            W_ovvo[mm][bb][ee][jj] += t1(jj,ff)*h2e_dirac_so(mm,n_occ+bb,n_occ+ee,n_occ+ff);
-        }
-        for(int nn = 0; nn < n_occ; nn++)
-        {
-            W_ovvo[mm][bb][ee][jj] -= t1(nn,bb)*h2e_dirac_so(mm,nn,n_occ+ee,jj);
-            for(int ff = 0; ff < n_vir; ff++)
-                W_ovvo[mm][bb][ee][jj] -= (0.5*t2(jj*n_occ+nn,ff*n_vir+bb) + t1(jj,ff)*t1(nn,bb)) * h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
-        }
-    }
+    W_oooo = h2e_oooo;
+    mult<double>(1.0,t1,"je",h2e_ooov,"mnie",1.0,W_oooo,"mnij");
+    mult<double>(-1.0,t1,"ie",h2e_ooov,"mnje",1.0,W_oooo,"mnij");
+    mult<double>(0.25,tau,"ijef",h2e_oovv,"mnef",1.0,W_oooo,"mnij");
 
-    for(int aa = 0; aa < n_vir; aa++)
-    for(int ee = 0; ee < n_vir; ee++)
-    {
-        F_vv[aa][ee] = 0.0;
-        for(int mm = 0; mm < n_occ; mm++)
-        for(int ff = 0; ff < n_vir; ff++)
-        {
-            F_vv[aa][ee] += t1(mm,ff)*h2e_dirac_so(mm,n_occ+aa,n_occ+ff,n_occ+ee);
-            for(int nn = 0; nn < n_occ; nn++)
-                F_vv[aa][ee] -= 0.5*tau_tilde[mm][nn][aa][ff]*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
-        }
-    }
-    for(int mm = 0; mm < n_occ; mm++)
-    for(int ii = 0; ii < n_occ; ii++)
-    {
-        F_oo[mm][ii] = 0.0;
-        for(int nn = 0; nn < n_occ; nn++)
-        for(int ee = 0; ee < n_vir; ee++)
-        {
-            F_oo[mm][ii] += t1(nn,ee)*h2e_dirac_so(mm,nn,ii,n_occ+ee);
-            for(int ff = 0; ff < n_vir; ff++)
-                F_oo[mm][ii] += 0.5*tau_tilde[ii][nn][ee][ff]*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
-        }
-    }
-    for(int mm = 0; mm < n_occ; mm++)
-    for(int ee = 0; ee < n_vir; ee++)
-    {
-        F_ov[mm][ee] = 0.0;
-        for(int nn = 0; nn < n_occ; nn++)
-        for(int ff = 0; ff < n_vir; ff++)
-        {
-            F_ov[mm][ee] += t1(nn,ff)*h2e_dirac_so(mm,nn,n_occ+ee,n_occ+ff);
-        } 
-    }
+    W_vvvv = h2e_vvvv;
+    mult<double>(1.0,t1,"mb",h2e_ovvv,"maef",1.0,W_vvvv,"abef");
+    mult<double>(-1.0,t1,"ma",h2e_ovvv,"mbef",1.0,W_vvvv,"abef");
+    mult<double>(0.25,tau,"mnab",h2e_oovv,"mnef",1.0,W_vvvv,"abef");
+
+    W_ovvo = h2e_ovvo;
+    mult<double>(1.0,t1,"jf",h2e_ovvv,"mbef",1.0,W_ovvo,"mbej");
+    mult<double>(1.0,t1,"nb",h2e_ooov,"mnje",1.0,W_ovvo,"mbej");
+    tensor<double> tensor_tmp({n_occ,n_occ,n_vir,n_vir});
+    tensor_tmp = t2;
+    mult<double>(1.0,t1,"jf",t1,"nb",0.5,tensor_tmp,"jnfb");
+    mult<double>(-1.0,tensor_tmp,"jnfb",h2e_oovv,"mnef",1.0,W_ovvo,"mbej");
+
+
+    mult<double>(1.0,t1,"mf",h2e_ovvv,"mafe",0.0,F_vv,"ae");
+    mult<double>(-0.5,tau_tilde,"mnaf",h2e_oovv,"mnef",1.0,F_vv,"ae");
+    mult<double>(1.0,t1,"ne",h2e_ooov,"mnie",0.0,F_oo,"mi");
+    mult<double>(0.5,tau_tilde,"inef",h2e_oovv,"mnef",1.0,F_oo,"mi");
+    mult<double>(1.0,t1,"nf",h2e_oovv,"mnef",0.0,F_ov,"me");    
 }
 
 void CCSD::evaluate_t1t2New()
 {
-    t1_new = t1;
-    t2_new = t2;
-
+    // t1 amplitudes
+    mult<double>(1.0,t1,"ie",F_vv,"ae",0.0,t1_new,"ia");
+    mult<double>(-1.0,t1,"ma",F_oo,"mi",1.0,t1_new,"ia");
+    mult<double>(1.0,t2,"imae",F_ov,"me",1.0,t1_new,"ia");
+    mult<double>(-0.5,t2,"imef",h2e_ovvv,"maef",1.0,t1_new,"ia");
+    mult<double>(0.5,t2,"mnae",h2e_ooov,"nmie",1.0,t1_new,"ia");
+    mult<double>(1.0,t1,"nf",h2e_ovvo,"nafi",1.0,t1_new,"ia");
+    // t2 amplitudes
+    t2_new = h2e_oovv;
+    mult<double>(1.0,t2,"ijae",F_vv,"be",1.0,t2_new,"ijab");
+    mult<double>(-1.0,t2,"ijbe",F_vv,"ae",1.0,t2_new,"ijab");
+    mult<double>(-1.0,t1,"ie",h2e_ovvv,"jeab",1.0,t2_new,"ijab");
+    mult<double>(1.0,t1,"je",h2e_ovvv,"ieab",1.0,t2_new,"ijab");
+    tensor<double> tensor_tmp({n_vir,n_vir});
+    mult<double>(1.0,t1,"mb",F_ov,"me",0.0,tensor_tmp,"be");
+    mult<double>(-0.5,t2,"ijae",tensor_tmp,"be",1.0,t2_new,"ijab");
+    mult<double>(0.5,t2,"ijbe",tensor_tmp,"ae",1.0,t2_new,"ijab");
+    tensor_tmp.reset({n_occ,n_vir,n_occ,n_vir});
+    mult<double>(1.0,t1,"ie",t1,"ma",0.0,tensor_tmp,"iema");
+    mult<double>(1.0,t2,"imae",W_ovvo,"mbej",1.0,t2_new,"ijab");
+    mult<double>(-1.0,t2,"imbe",W_ovvo,"maej",1.0,t2_new,"ijab");
+    mult<double>(-1.0,t2,"jmae",W_ovvo,"mbei",1.0,t2_new,"ijab");
+    mult<double>(1.0,t2,"jmbe",W_ovvo,"maei",1.0,t2_new,"ijab");
+    mult<double>(-1.0,tensor_tmp,"iema",h2e_ovvo,"mbej",1.0,t2_new,"ijab");
+    mult<double>(1.0,tensor_tmp,"iemb",h2e_ovvo,"maej",1.0,t2_new,"ijab");
+    mult<double>(1.0,tensor_tmp,"jema",h2e_ovvo,"mbei",1.0,t2_new,"ijab");
+    mult<double>(-1.0,tensor_tmp,"jemb",h2e_ovvo,"maei",1.0,t2_new,"ijab");
+    mult<double>(0.5,tau,"ijef",W_vvvv,"abef",1.0,t2_new,"ijab");
+    mult<double>(-1.0,t2,"imab",F_oo,"mj",1.0,t2_new,"ijab");
+    mult<double>(1.0,t2,"jmab",F_oo,"mi",1.0,t2_new,"ijab");
+    mult<double>(-1.0,t1,"ma",h2e_ooov,"ijmb",1.0,t2_new,"ijab");
+    mult<double>(1.0,t1,"mb",h2e_ooov,"ijma",1.0,t2_new,"ijab");
+    tensor_tmp.reset({n_occ,n_occ});
+    mult<double>(1.0,t1,"je",F_ov,"me",0.0,tensor_tmp,"jm");
+    mult<double>(-0.5,t2,"imab",tensor_tmp,"jm",1.0,t2_new,"ijab");
+    mult<double>(0.5,t2,"jmab",tensor_tmp,"im",1.0,t2_new,"ijab");
+    mult<double>(0.5,tau,"mnab",W_oooo,"mnij",1.0,t2_new,"ijab");
     for(int ii = 0; ii < n_occ; ii++)
     for(int aa = 0; aa < n_vir; aa++)
     {
-        // t1 amplitudes
-        t1_new(ii,aa) = 0.0;
-        for(int ee = 0; ee < n_vir; ee++)
-            t1_new(ii,aa) += t1(ii,ee)*F_vv[aa][ee];
-        for(int mm = 0; mm < n_occ; mm++)
-            t1_new(ii,aa) -= t1(mm,aa)*F_oo[mm][ii];
-        for(int mm = 0; mm < n_occ; mm++)
-        for(int ee = 0; ee < n_vir; ee++)
-        {
-            t1_new(ii,aa) += t2(ii*n_occ+mm,aa*n_vir+ee)*F_ov[mm][ee];
-            for(int ff = 0; ff < n_vir; ff++)
-                t1_new(ii,aa) -= 0.5*t2(ii*n_occ+mm,ee*n_vir+ff)*h2e_dirac_so(mm,n_occ+aa,n_occ+ee,n_occ+ff);
-            for(int nn = 0; nn < n_occ; nn++)
-                t1_new(ii,aa) -= 0.5*t2(mm*n_occ+nn,aa*n_vir+ee)*h2e_dirac_so(nn,mm,n_occ+ee,ii);
-        }
-        for(int nn = 0; nn < n_occ; nn++)
-        for(int ff = 0; ff < n_vir; ff++)
-        {    
-            t1_new(ii,aa) -= t1(nn,ff)*h2e_dirac_so(nn,n_occ+aa,ii,n_occ+ff);
-        }
         t1_new(ii,aa) = t1_new(ii,aa) / D1(ii,aa);
-
-
-        // t2 amplitudes
         for(int jj = 0; jj < n_occ; jj++)
         for(int bb = 0; bb < n_vir; bb++)
-        {
-            t2_new(ii*n_occ+jj,aa*n_vir+bb) = h2e_dirac_so(ii,jj,aa+n_occ,bb+n_occ);
-            for(int ee = 0; ee < n_vir; ee++)
-            {
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += t2(ii*n_occ+jj,aa*n_vir+ee) * F_vv[bb][ee];
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) -= t2(ii*n_occ+jj,bb*n_vir+ee) * F_vv[aa][ee];
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += t1(ii,ee)*h2e_dirac_so(aa+n_occ,bb+n_occ,ee+n_occ,jj);
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) -= t1(jj,ee)*h2e_dirac_so(aa+n_occ,bb+n_occ,ee+n_occ,ii);
-                for(int mm = 0; mm < n_occ; mm++)
-                {
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) -= 0.5*t2(ii*n_occ+jj,aa*n_vir+ee)*t1(mm,bb)*F_ov[mm][ee];
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*t2(ii*n_occ+jj,bb*n_vir+ee)*t1(mm,aa)*F_ov[mm][ee];
-
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += (t2(ii*n_occ+mm,aa*n_vir+ee)*W_ovvo[mm][bb][ee][jj] - t1(ii,ee)*t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ee+n_occ,jj));
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) -= (t2(ii*n_occ+mm,bb*n_vir+ee)*W_ovvo[mm][aa][ee][jj] - t1(ii,ee)*t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ee+n_occ,jj));
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) -= (t2(jj*n_occ+mm,aa*n_vir+ee)*W_ovvo[mm][bb][ee][ii] - t1(jj,ee)*t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ee+n_occ,ii));
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += (t2(jj*n_occ+mm,bb*n_vir+ee)*W_ovvo[mm][aa][ee][ii] - t1(jj,ee)*t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ee+n_occ,ii));
-                }
-                for(int ff = 0; ff < n_vir; ff++)
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*tau[ii][jj][ee][ff]*W_vvvv[aa][bb][ee][ff];
-            }
-            for(int mm = 0; mm < n_occ; mm++)
-            {
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) -= t2(ii*n_occ+mm,aa*n_vir+bb)*F_oo[mm][jj];
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += t2(jj*n_occ+mm,aa*n_vir+bb)*F_oo[mm][ii];
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) -= t1(mm,aa)*h2e_dirac_so(mm,bb+n_occ,ii,jj);
-                t2_new(ii*n_occ+jj,aa*n_vir+bb) += t1(mm,bb)*h2e_dirac_so(mm,aa+n_occ,ii,jj);
-                for(int ee = 0; ee < n_vir; ee++)
-                {
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) -= 0.5 * t2(ii*n_occ+mm,aa*n_vir+bb)*t1(jj,ee)*F_ov[mm][ee];
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5 * t2(jj*n_occ+mm,aa*n_vir+bb)*t1(ii,ee)*F_ov[mm][ee];
-                }
-                for(int nn = 0; nn < n_occ; nn++)
-                    t2_new(ii*n_occ+jj,aa*n_vir+bb) += 0.5*tau[mm][nn][aa][bb]*W_oooo[mm][nn][ii][jj];
-            }                        
-            t2_new(ii*n_occ+jj,aa*n_vir+bb) = t2_new(ii*n_occ+jj,aa*n_vir+bb) / D2(ii*n_occ+jj,aa*n_vir+bb);
+        {                     
+            t2_new(ii,jj,aa,bb) = t2_new(ii,jj,aa,bb) / D2(ii,jj,aa,bb);
         }
     }
+    return;
 }
 
-double CCSD::evaluateChange(const MatrixXd& M1, const MatrixXd& M2)
+double CCSD::evaluateChange_t1(const tensor<double>& M1, const tensor<double>& M2)
 {
     double tmp = 0.0;
-    for(int ii = 0; ii < M1.rows(); ii++)
-    for(int jj = 0; jj < M1.cols(); jj++)
+    for(int ii = 0; ii < M1.length(0); ii++)
+    for(int jj = 0; jj < M1.length(1); jj++)
         tmp += pow((M1(ii,jj) - M2(ii,jj)),2);
-
+    return sqrt(tmp);
+}
+double CCSD::evaluateChange_t2(const tensor<double>& M1, const tensor<double>& M2)
+{
+    double tmp = 0.0;
+    for(int ii = 0; ii < M1.length(0); ii++)
+    for(int jj = 0; jj < M1.length(1); jj++)
+    for(int aa = 0; aa < M1.length(2); aa++)
+    for(int bb = 0; bb < M1.length(3); bb++)
+        tmp += pow((M1(ii,jj,aa,bb) - M2(ii,jj,aa,bb)),2);
     return sqrt(tmp);
 }
 
@@ -393,16 +258,15 @@ double CCSD::evaluate_ene_ccsd()
     for(int aa = 0; aa < n_vir; aa++)
     for(int bb = 0; bb < n_vir; bb++)
     {
-        ene += h2e_dirac_so(ii,jj,aa+n_occ,bb+n_occ)*(0.25*t2(ii*n_occ+jj,aa*n_vir+bb) + 0.5*t1(ii,aa)*t1(jj,bb));
+        ene += h2e_dirac_so(ii,jj,aa+n_occ,bb+n_occ)*(0.25*t2(ii,jj,aa,bb) + 0.5*t1(ii,aa)*t1(jj,bb));
     }
-
     return ene;
 }
 
 void CCSD::runCCSD()
 {
     memoryAllocation();
-    vector<MatrixXd> error_DIIS, t1_DIIS, t2_DIIS;
+    vector<tensor<double>> error_DIIS, t1_DIIS, t2_DIIS;
     double d_t1 = 10, d_t2 = 10, ene_new, de;
     cout << endl;
     cout << "###########################" << endl;
@@ -434,7 +298,8 @@ void CCSD::runCCSD()
             {    
                 for(int jj = 0; jj <= ii; jj++)
                 {
-                    B4DIIS(ii,jj) = (error_DIIS[ii].adjoint()*error_DIIS[jj])(0,0);
+                    
+                    dot<double>(error_DIIS[ii],"i",error_DIIS[jj],"i",B4DIIS(ii,jj));
                     B4DIIS(jj,ii) = B4DIIS(ii,jj);
                 }
                 B4DIIS(tmp_size, ii) = -1.0;
@@ -444,19 +309,19 @@ void CCSD::runCCSD()
             B4DIIS(tmp_size, tmp_size) = 0.0;
             vec_b(tmp_size) = -1.0;
             VectorXd C = B4DIIS.partialPivLu().solve(vec_b);
-            t1 = MatrixXd::Zero(t1.rows(),t1.cols());
-            t2 = MatrixXd::Zero(t2.rows(),t2.cols());
+            t1 = 0.0;
+            t2 = 0.0;
             for(int ii = 0; ii < tmp_size; ii++)
             {
-                t1 += C(ii) * t1_DIIS[ii];
-                t2 += C(ii) * t2_DIIS[ii];
+                add<double>(C(ii),t1_DIIS[ii],"ij",1.0,t1,"ij");
+                add<double>(C(ii),t2_DIIS[ii],"ijab",1.0,t2,"ijab");
             }
             evaluate_tau();
             evaluate_W_F();
             evaluate_t1t2New();
         }
-        d_t1 = evaluateChange(t1,t1_new);
-        d_t2 = evaluateChange(t2,t2_new);
+        d_t1 = evaluateChange_t1(t1,t1_new);
+        d_t2 = evaluateChange_t2(t2,t2_new);
         t1 = t1_new;
         t2 = t2_new;
         ene_new = evaluate_ene_ccsd();
