@@ -593,6 +593,7 @@ MatrixXd MOLINT::get_h1e(const string& intName) const
                     else
                     {
                         cout << "Error: get_h1e called with an unknown intName." << endl;
+                        exit(99);
                     }
 
                     tmp2++;

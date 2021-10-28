@@ -306,13 +306,10 @@ double CCSD::evaluateChange_t2(const tensor<double>& M1, const tensor<double>& M
 double CCSD::evaluate_ene_ccsd()
 {
     double ene = 0.0;
-    for(int ii = 0; ii < n_occ; ii++)
-    for(int jj = 0; jj < n_occ; jj++)
-    for(int aa = 0; aa < n_vir; aa++)
-    for(int bb = 0; bb < n_vir; bb++)
-    {
-        ene += h2e_dirac_so(ii,jj,aa+n_occ,bb+n_occ)*(0.25*t2(ii,jj,aa,bb) + 0.5*t1(ii,aa)*t1(jj,bb));
-    }
+    tensor<double> tmp = t2;
+    mult<double>(0.5,t1,"ia",t1,"jb",0.25,tmp,"ijab");
+    dot<double>(h2e_oovv,"ijab",tmp,"ijab",ene);
+
     return ene;
 }
 
